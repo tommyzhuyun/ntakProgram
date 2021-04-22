@@ -1,0 +1,27 @@
+*****< 出力抵抗算出用テストベンチ >*****
+.lib OR
+
+*****< Parameters >*****
+.param half='psvoltage/2'
+.param valr1=10k
+.param valr2=10k
+
+*****< Power_Supply >*****
+VDD	vdd gnd	'half'
+VSS	gnd vss	'half'
+
+******< Input >******
+VIN	inp gnd dc 0
+
+*****< Circuit Topology >*****
+Xor inm inp out vdd vss opamp
+R1 inm gnd valr1
+R2 out inm valr2
+
+******< Control >******
+*.DCの記述により.TFと重複しているためwarning発生
+*.DC VIN -0.01 0.01 0.01
+.TF V(out) VIN
+.TEMP 25
+
+.endl

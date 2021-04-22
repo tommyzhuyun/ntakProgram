@@ -1,0 +1,46 @@
+*****< Circuit for Slew Rate >*****
+
+*****< Option >*****
+.lib '../Lib_Data/Option.lib' ngspice
+
+*****< MOSFET MODEL >*****
+.lib '../Lib_Data/tsmc018.lib' model27
+
+*****< Main Stage >*****
+.lib '../Sp_Data/OPamp.sp' opamp
+
+*****< Parameters >*****
+.param half='psvoltage/2'
+.param valr1=10k
+.param valr2=10k
+.param grad=1e11
+.param vp=0.1
+.param td=100n          $ pulse delay
+.param tr='vp/grad'     $ pulse transition rise time
+.param tf='vp/grad'     $ pulse transition fall time
+.param pw1=300u         $ pulse width
+.param pp1=400u         $ pulse period
+
+*****< Power_Supply >*****
+VDD	vdd gnd	{half}
+VSS	gnd vss	{half}
+
+******< Input >******
+VIN1 inp1 gnd PULSE {-vp} {vp} {td} {tr} {tf} {pw1} {pp1}
+VIN2 inp2 gnd PULSE {vp} {-vp} {td} {tr} {tf} {pw1} {pp1}
+
+******< Circuit Topology >******
+* For rise edge slewrate
+X1a inm1 inp1 out1 vdd vss opamp
+R1a inm1 gnd {valr1}
+R2a inm1 out1 {valr2}
+
+* For fall edge slewrate
+X1b inm2 inp2 out2 vdd vss opamp
+R1b inm2 gnd {valr1}
+R2b inm2 out2 {valr2}
+
+* Offset voltage
+X1c inm3 gnd os vdd vss opamp
+R1c inm3 gnd {valr1}
+R2c inm3 os  {valr2}

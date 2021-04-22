@@ -1,0 +1,42 @@
+*****< スルーレート計算用の振幅を算出するテストベンチ >*****
+.lib SR1
+
+*****< Parameters >*****
+.param half='psvoltage/2'
+.param valr1=10k
+.param valr2=10k
+.param vstart = 0.01
+.param vstop = half
+.param vincr = 0.01
+.param gain=2
+
+*****< Power_Supply >*****
+VDD	vdd gnd	half
+VSS	gnd vss	half
+
+******< Input >******
+VIN in1 gnd dc 0
+E1  gnd in2 in1 gnd 1
+
+******< Circuit Topology >******
+* For rise edge slewrate
+X1a inm1 in1 out1 vdd vss opamp
+R1a inm1 gnd valr1
+R2a inm1 out1 valr2
+
+* For fall edge slewrate
+X1b inm2 in2 out2 vdd vss opamp
+R1b inm2 gnd valr1
+R2b inm2 out2 valr2
+
+* Offset voltage
+X1c inm3 gnd os vdd vss opamp
+R1c inm3 gnd valr1
+R2c inm3 os  valr2
+
+******< Control >******
+.dc vin vstart vstop vincr
+.print par"abs(v(out1,os)-v(in1)*gain)/v(in1)" par"abs(v(out2,os)-v(in2)*gain)/v(in2)"
+* .print v(in1) v(out1) v(out2)
+
+.endl

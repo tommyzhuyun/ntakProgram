@@ -1,0 +1,66 @@
+*****< スルーレート算出用テストベンチ >*****
+.lib SR2
+
+*****< Parameters >*****
+.param vp=0.1
+.param half='psvoltage/2'
+.param valr1=10k
+.param valr2=10k
+.param grad=1e11
+.param td=100n         $ pulse delay
+.param tr='vp/grad'    $ pulse transition time
+.param tf='vp/grad'
+.param pw1=300u        $ pulse width
+.param pp1=400u        $ pulse period
+
+
+*****< Power_Supply >*****
+VDD	vdd gnd	'half'
+VSS	gnd vss	'half'
+
+******< Input >******
+VIN in1 gnd dc 0 PULSE '-vp' 'vp' td tr tf pw1 pp1
+E1  gnd in2 in1 gnd 1
+
+******< Circuit Topology >******
+* For rise edge slewrate
+X1a inm1 in1  out1 vdd vss opamp
+R1a inm1 gnd  valr1
+R2a inm1 out1 valr2
+
+* For fall edge slewrate
+X1b inm2 in2  out2 vdd vss opamp
+R1b inm2 gnd  valr1
+R2b inm2 out2 valr2
+
+* Offset voltage
+X1c inm3 gnd os vdd vss opamp
+R1c inm3 gnd valr1
+R2c inm3 os  valr2
+
+******< Control >******
+.TRAN 10n 200u
+.PRINT V(in1) V(out1,os) V(out2,os)
+.TEMP 25
+
+******< Measure command rise >******
+.MEAS TRAN vps  FIND  V(out1,os) AT=0 *立ち上がる前の電圧
+.MEAS TRAN vpt  FIND  V(out1,os) AT=200u *立ち上がり後の電圧
+* .MEAS TRAN vdiff_r param='vpt-vps' *立ち上がり後ー立ち上がり前
+.MEAS TRAN srr1 DERIV V(out1,os) WHEN V(out1,os)='0.9*vps' cross=1
+.MEAS TRAN srr2 DERIV V(out1,os) WHEN V(out1,os)=0 cross=1
+.MEAS TRAN srr3 DERIV V(out1,os) WHEN V(out1,os)='0.9*vpt' cross=1
+.MEAS TRAN srr  PARAM='(srr1+srr2+srr3)/3'
+
+******< Measure command fall >******
+.MEAS TRAN vns  FIND  V(out2,os) AT=0
+.MEAS TRAN vnt  FIND  V(out2,os) AT=200u
+* .MEAS TRAN vdiff_f param='vns-vnt' *立ち上がり後ー立ち上がり前
+.MEAS TRAN srf1 DERIV V(out2,os) WHEN V(out2,os)='0.9*vns' cross=1
+.MEAS TRAN srf2 DERIV V(out2,os) WHEN V(out2,os)=0 cross=1
+.MEAS TRAN srf3 DERIV V(out2,os) WHEN V(out2,os)='0.9*vnt' cross=1
+.MEAS TRAN srf  PARAM='(srf1+srf2+srf3)/3'
+
+.MEAS TRAN sr   PARAM='min(abs(srr),abs(srf))'
+
+.endl

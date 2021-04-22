@@ -1,0 +1,38 @@
+*****< Circuit for OVR >*****
+
+*****< Option >*****
+.lib '../Lib_Data/Option.lib' ngspice
+
+*****< MOSFET MODEL >*****
+.lib '../Lib_Data/tsmc018.lib' model27
+
+*****< Main Stage >*****
+.lib '../Sp_Data/OPamp.sp' opamp
+
+*****< Parameters >*****
+.param half='psvoltage/2'
+.param rload=20k
+
+*****< Power_Supply >*****
+VDD vdd gnd {half}
+VSS gnd vss {half}
+
+******< Input >******
+VIN in1 gnd dc 0
+E1  gnd in2 in1 gnd 1
+
+*****< Circuit Topology >*****
+* Positive side
+X1a inm1 gnd out1 vdd vss opamp
+R1a in1 inm1 {rload}
+R2a inm1 out1 {rload}
+
+* Negative side
+X1b inm2 gnd out2 vdd vss opamp
+R1b in2 inm2 {rload}
+R2b inm2 out2 {rload}
+
+* offset voltage
+X1c inm3 gnd os vdd vss opamp
+R1c gnd inm3 {rload}
+R2c inm3 os  {rload}

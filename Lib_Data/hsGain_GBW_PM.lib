@@ -1,0 +1,147 @@
+*****< 直流利得 & 利得帯域幅積 & 位相余裕算出用のテストベンチ >*****
+.lib Gain_GBW_PM
+
+*****< Parameters >*****
+.param half='psvoltage/2'
+.param valrl=20k
+.param valrf=1T
+.param valcf=1m
+
+*****< Power_Supply >*****
+VDD	vdd gnd	'half'
+VSS	gnd vss	'half'
+
+******< Input >******
+VIN	inp gnd dc 0 ac 1
+
+*****< Circuit Topology >*****
+Xgain inm inp out vdd vss opamp
+RL  out gnd valrl
+RF  out inm valrf
+CF  inm gnd valcf
+
+******< Control >******
+.AC DEC 100 0.1 10G
+* .PRINT VDB(out) VP(out)
+.TEMP 25
+
+******< Measure command >******
+* 直流利得[倍]
+.MEAS AC dcgain FIND V(out) AT=0.1
+
+* 直流利得[dB]
+.meas ac dcgain_dB find Vdb(out) at=0.1
+
+
+** 利得帯域幅積 **
+* 直流利得[dB]の半分
+.meas ac half_dcgain_dB param='dcgain_dB/2'
+
+* 直流利得が半分になったときの周波数
+.meas ac half_dcgain_dB_freq when Vdb(out)=half_dcgain_dB fall=1
+
+* 直流利得が半分になった条件での利得帯域幅積[Hz]
+.meas ac gain_bandwidth_cond1 param='half_dcgain_dB_freq * 10^(half_dcgain_dB/20)'
+
+* ユニティゲイン周波数[Hz]
+.meas ac unity_gain_freq when Vdb(out)=0 fall=1
+
+* 利得帯域幅積[Hz]
+.meas ac gain_bandwidth param='min(gain_bandwidth_cond1, unity_gain_freq)'
+
+
+** 位相余裕 **
+* 利得が1での位相余裕
+.meas ac phase_cond1 find vp(out) at=unity_gain_freq
+.meas phase_margin_cond1 param='180 - abs(phase_cond1)'
+
+* 0.1からユニティゲイン周波数の間で最も位相回転している周波数での位相
+.meas ac phase_max max Vp(out) from=0.1 to=unity_gain_freq
+
+* 周波数が0.1[Hz]のときの位相
+.meas ac phase_at_0freq find Vp(out) at=0.1
+
+* 0.1[Hz]からユニティゲイン周波数の間で最も位相回転している周波数を用いた位相余裕  180 - abs(最大位相)-0.1Hz時の位相
+.meas phase_margin_cond2 param='180 - abs(phase_max) - phase_at_0freq'
+
+* * 位相余裕[度]
+.meas phase_margin param='min(phase_margin_cond1, phase_margin_cond2)'
+
+
+* *位相が180度回転したときの周波数
+* .meas ac phase180 when Vp(out)='freq0phase-180' fall=1
+
+* *位相が180度回転したときの利得
+* .meas ac phase180gain find Vdb(out) at=phase180
+
+* *利得余裕[dB](0dBから何dB下がっているか)
+* .meas ac gain_margin param='-phase180gain'
+
+.endl
+
+--------------------------------------------------
+
+*****< 直流利得&利得帯域幅積&位相余裕算出回路のテストベンチ >*****
+.lib Actual_DCG_GBP_PM
+
+******< Control >******
+.AC DEC 100 0.1 10G
+.PRINT VDB(out) VP(out)
+.TEMP 25
+
+.PARAM half='psvoltage/2' valrl=20k valrf=1T valcf=1m bgain=10
+*****< Power_Supply >*****
+VDD	vdd gnd	'half'
+VSS	gnd vss	'half'
+
+******< Input >******
+X1 inm inp out1 vdd vss opamp
+VIN	inp gnd dc 0 ac 1
+RL	out gnd valrl
+RF	out inm valrf
+CF	inm gnd	valcf
+E1  out gnd out1 gnd bgain
+
+
+******< Measure command >******
+
+*直流利得[倍]
+.MEAS AC dcgain FIND V(out) AT=0.1
+
+*直流利得[dB]
+.meas ac dcgain_dB find Vdb(out) at=0.1
+
+*ユニティゲイン周波数[Hz]
+.meas ac unitygain when Vdb(out)=0 fall=1
+
+*位相余裕用ユニティゲイン周波数[Hz]
+.meas ac unitygain_margin when Vdb(out)=0.1 fall=1
+.meas ac phase_min min Vp(out) from=0.1 to=unitygain
+
+*0.1からユニティゲイン周波数の間で最も位相回転している所の位相
+.meas ac phase find Vp(out) at=unitygain
+.meas ac phase_unity param='abs(phase_min)'
+
+*周波数が0.1[Hz]のときの位相
+.meas ac freq0phase find Vp(out) at=0.1
+
+*位相が180度回転したときの周波数
+.meas ac phase180 when Vp(out)='freq0phase-180' fall=1
+
+*位相余裕[度](startfからユニティゲイン周波数の間で最も位相回転してい
+*るところの位相余裕  180+(最小位相-0.1Hz時の位相))
+.meas ac phase_margin param='180-phase_unity'
+
+*位相が180度回転したときの利得
+.meas ac phase180gain find Vdb(out) at=phase180
+
+*利得余裕[dB](0dBから何dB下がっているか)
+.meas ac gain_margin param='-phase180gain'
+
+*直流利得[dB]の半分
+.meas ac halfdc param='dcgain_dB^(1/2)'
+
+*直流利得が半分になったときの周波数
+.meas ac halfdc_f when V(out)=halfdc fall=1
+
+.endl

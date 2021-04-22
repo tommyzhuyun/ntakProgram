@@ -1,0 +1,44 @@
+*****< Circuit for PSRR >*****
+
+*****< Option >*****
+.lib '../Lib_Data/Option.lib' ngspice
+
+*****< MOSFET MODEL >*****
+.lib '../Lib_Data/tsmc018.lib' model27
+
+*****< Main Stage >*****
+.lib '../Sp_Data/OPamp.sp' opamp
+
+*****< Parameters >*****
+.param half='psvoltage/2'
+.param valrl=20k
+.param valrf=1T
+.param valcf=1m
+
+*****< Power_Supply >*****
+VDD  vdd  gnd  {half}
+VDD1 vdd  vdd1 dc 0 ac 1
+VSS  gnd  vss  {half}
+VSS1 vss2 vss  dc 0 ac  1
+
+******< Input >******
+VIN inp gnd dc 0 ac 1
+
+******< Circuit Topology >******
+* For differential gain
+X1 inm inp od vdd vss opamp
+R1 od inm {valrf}
+C1 inm gnd {valcf}
+R2 od gnd {valrl}
+
+* For VDD
+X1a inm1 gnd odd vdd1 vss opamp
+R1a odd gnd {valrl}
+R2a odd inm1 {valrf}
+C1a inm1 gnd {valcf}
+
+* For VSS
+X1b inm2 gnd oss vdd vss2 opamp
+R1b oss gnd {valrl}
+R2b oss inm2 {valrf}
+C1b inm2 gnd {valcf}

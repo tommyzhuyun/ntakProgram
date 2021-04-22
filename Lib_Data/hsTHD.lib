@@ -1,0 +1,26 @@
+*****< 全高調波歪用テストベンチ >*****
+.lib THD
+
+*****< Parameters >*****
+.param half='psvoltage/2'
+.param valr1=10k
+.param valr2=10k
+
+*****< Power_Supply >*****
+VDD	vdd gnd	PULSE 0 half 0 0.1n 0.1n 1.5015 2.002
+VSS	gnd vss	PULSE 0 half 0 0.1n 0.1n 1.5015 2.002
+
+******< Input >******
+VIN	inp gnd SIN 0 2.5m 100 1m
+
+*****< Circuit Topology >*****
+Xthd inm inp out vdd vss opamp
+R1 inm gnd valr1
+R2 out inm valr2
+
+******< Control >******
+.TRAN 10n 1.001 START='1.001-10m'
+.FOUR 100 V(out)
+.TEMP 25
+
+.endl

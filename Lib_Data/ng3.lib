@@ -1,0 +1,33 @@
+*****< Circuit for CC, OR, IRN >*****
+
+*****< Option >*****
+.lib '../Lib_Data/Option.lib' ngspice
+
+*****< MOSFET MODEL >*****
+.lib '../Lib_Data/tsmc018.lib' model27
+
+*****< Resistor MODEL >*****
+.MODEL nores R noise=0
+
+*****< Main Stage >*****
+.lib '../Sp_Data/OPamp.sp' opamp
+
+*****< Parameters >*****
+.param half='psvoltage/2'
+.param valr1=10k
+.param valr2=10k
+.csparam psval_low='0.9*half'
+.csparam psval=half
+.csparam psval_high='1.1*half'
+
+*****< Power_Supply >*****
+VDD	vdd gnd {half}
+VSS	gnd vss {half}
+
+******< Input >******
+VIN	inp gnd dc 0 ac 1
+
+*****< Circuit Topology >*****
+X3 inm inp out vdd vss opamp
+R1 inm gnd nores {valr1}
+R2 out inm nores {valr2}

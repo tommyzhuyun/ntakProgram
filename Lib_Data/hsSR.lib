@@ -1,0 +1,310 @@
+*****< スルーレート用テストベンチ >*****
+.lib SR
+
+******< Control >******
+.TRAN 10p 200u
+*.PRINT V(inp1) V(out1,os)
+.TEMP 25
+
+.PARAM half='psvoltage/2' valr1=10k valr2=10k grad=1e11
++ vp='half*1.4424' $ pulse amplitude
++ td=100n         $ pulse delay
++ tr='vp/grad'    $ pulse transition time
++ tf='vp/grad'
++ pw1=300u        $ pulse width
++ pp1=400u        $ pulse period
+
+*****< Power_Supply >*****
+VDD	vdd gnd	'half'
+VSS	gnd vss	'half'
+
+******< Input >******
+VIN1 inp1 gnd PULSE '-vp' 'vp' td tr tf pw1 pp1
+VIN2 inp2 gnd PULSE 'vp' '-vp' td tr tf pw1 pp1
+
+* For rise edge slewrate
+X1a inm1 inp1 out1 vdd vss opamp
+R1a inm1 gnd valr1
+R2a out1 inm1 valr2
+
+* For fall edge slewrate
+X1b inm2 inp2 out2 vdd vss opamp
+R1b inm2 gnd valr1
+R2b out2 inm2 valr2
+
+* Offset voltage
+X1c inm3 gnd os vdd vss opamp
+R1c inm3 gnd valr1
+R2c os inm3  valr2
+
+******< Measure command rise >******
+*.MEAS TRAN vps  min  V(out1,os)  from=0 to=200u *立ち上がる前の電圧
+*.MEAS TRAN vpt  max  V(out1,os) from=0 to=200u *立ち上がり後の電圧
+.MEAS TRAN vps  FIND  V(out1,os) AT=0 *立ち上がる前の電圧
+.MEAS TRAN vpt  FIND  V(out1,os) AT=200u *立ち上がり後の電圧
+.MEAS TRAN vdiff_r param='vpt-vps' *立ち上がり後ー立ち上がり前
+.MEAS TRAN srr1 DERIV V(out1,os) WHEN V(out1,os)='0.9*vps' cross=1
+.MEAS TRAN srr2 DERIV V(out1,os) WHEN V(out1,os)=0 cross=1
+.MEAS TRAN srr3 DERIV V(out1,os) WHEN V(out1,os)='0.9*vpt' cross=1
+.MEAS TRAN srr  PARAM='(srr1+srr2+srr3)/3'
+
+******< Measure command fall >******
+*.MEAS TRAN vns  min  V(out2,os) from=0 to=200u
+*.MEAS TRAN vnt  max  V(out2,os) from=0 to=200u
+.MEAS TRAN vns  FIND  V(out2,os) AT=0
+.MEAS TRAN vnt  FIND  V(out2,os) AT=200u
+.MEAS TRAN vdiff_f param='vns-vnt' *立ち上がり後ー立ち上がり前
+.MEAS TRAN srf1 DERIV V(out2,os) WHEN V(out2,os)='0.9*vns' cross=1
+.MEAS TRAN srf2 DERIV V(out2,os) WHEN V(out2,os)=0 cross=1
+.MEAS TRAN srf3 DERIV V(out2,os) WHEN V(out2,os)='0.9*vnt' cross=1
+.MEAS TRAN srf  PARAM='(srf1+srf2+srf3)/3'
+
+.MEAS TRAN sr   PARAM='min(abs(srr),abs(srf))'
+
+*****< rise_check_start >*****
+.meas tran dummy1 when V(out1,os)=vps *取得初めの目印となるダミー*
+.meas tran rp001 when V(out1,os)='vps+(vdiff_r*1/100)' fall=1
+.meas tran rp002 when V(out1,os)='vps+(vdiff_r*2/100)' fall=1
+.meas tran rp003 when V(out1,os)='vps+(vdiff_r*3/100)' fall=1
+.meas tran rp004 when V(out1,os)='vps+(vdiff_r*4/100)' fall=1
+.meas tran rp005 when V(out1,os)='vps+(vdiff_r*5/100)' fall=1
+.meas tran rp006 when V(out1,os)='vps+(vdiff_r*6/100)' fall=1
+.meas tran rp007 when V(out1,os)='vps+(vdiff_r*7/100)' fall=1
+.meas tran rp008 when V(out1,os)='vps+(vdiff_r*8/100)' fall=1
+.meas tran rp009 when V(out1,os)='vps+(vdiff_r*9/100)' fall=1
+.meas tran rp010 when V(out1,os)='vps+(vdiff_r*10/100)' fall=1
+.meas tran rp011 when V(out1,os)='vps+(vdiff_r*11/100)' fall=1
+.meas tran rp012 when V(out1,os)='vps+(vdiff_r*12/100)' fall=1
+.meas tran rp013 when V(out1,os)='vps+(vdiff_r*13/100)' fall=1
+.meas tran rp014 when V(out1,os)='vps+(vdiff_r*14/100)' fall=1
+.meas tran rp015 when V(out1,os)='vps+(vdiff_r*15/100)' fall=1
+.meas tran rp016 when V(out1,os)='vps+(vdiff_r*16/100)' fall=1
+.meas tran rp017 when V(out1,os)='vps+(vdiff_r*17/100)' fall=1
+.meas tran rp018 when V(out1,os)='vps+(vdiff_r*18/100)' fall=1
+.meas tran rp019 when V(out1,os)='vps+(vdiff_r*19/100)' fall=1
+.meas tran rp020 when V(out1,os)='vps+(vdiff_r*20/100)' fall=1
+.meas tran rp021 when V(out1,os)='vps+(vdiff_r*21/100)' fall=1
+.meas tran rp022 when V(out1,os)='vps+(vdiff_r*22/100)' fall=1
+.meas tran rp023 when V(out1,os)='vps+(vdiff_r*23/100)' fall=1
+.meas tran rp024 when V(out1,os)='vps+(vdiff_r*24/100)' fall=1
+.meas tran rp025 when V(out1,os)='vps+(vdiff_r*25/100)' fall=1
+.meas tran rp026 when V(out1,os)='vps+(vdiff_r*26/100)' fall=1
+.meas tran rp027 when V(out1,os)='vps+(vdiff_r*27/100)' fall=1
+.meas tran rp028 when V(out1,os)='vps+(vdiff_r*28/100)' fall=1
+.meas tran rp029 when V(out1,os)='vps+(vdiff_r*29/100)' fall=1
+.meas tran rp030 when V(out1,os)='vps+(vdiff_r*30/100)' fall=1
+.meas tran rp031 when V(out1,os)='vps+(vdiff_r*31/100)' fall=1
+.meas tran rp032 when V(out1,os)='vps+(vdiff_r*32/100)' fall=1
+.meas tran rp033 when V(out1,os)='vps+(vdiff_r*33/100)' fall=1
+.meas tran rp034 when V(out1,os)='vps+(vdiff_r*34/100)' fall=1
+.meas tran rp035 when V(out1,os)='vps+(vdiff_r*35/100)' fall=1
+.meas tran rp036 when V(out1,os)='vps+(vdiff_r*36/100)' fall=1
+.meas tran rp037 when V(out1,os)='vps+(vdiff_r*37/100)' fall=1
+.meas tran rp038 when V(out1,os)='vps+(vdiff_r*38/100)' fall=1
+.meas tran rp039 when V(out1,os)='vps+(vdiff_r*39/100)' fall=1
+.meas tran rp040 when V(out1,os)='vps+(vdiff_r*40/100)' fall=1
+.meas tran rp041 when V(out1,os)='vps+(vdiff_r*41/100)' fall=1
+.meas tran rp042 when V(out1,os)='vps+(vdiff_r*42/100)' fall=1
+.meas tran rp043 when V(out1,os)='vps+(vdiff_r*43/100)' fall=1
+.meas tran rp044 when V(out1,os)='vps+(vdiff_r*44/100)' fall=1
+.meas tran rp045 when V(out1,os)='vps+(vdiff_r*45/100)' fall=1
+.meas tran rp046 when V(out1,os)='vps+(vdiff_r*46/100)' fall=1
+.meas tran rp047 when V(out1,os)='vps+(vdiff_r*47/100)' fall=1
+.meas tran rp048 when V(out1,os)='vps+(vdiff_r*48/100)' fall=1
+.meas tran rp049 when V(out1,os)='vps+(vdiff_r*49/100)' fall=1
+.meas tran rp050 when V(out1,os)='vps+(vdiff_r*50/100)' fall=1
+.meas tran rp051 when V(out1,os)='vps+(vdiff_r*51/100)' fall=1
+.meas tran rp052 when V(out1,os)='vps+(vdiff_r*52/100)' fall=1
+.meas tran rp053 when V(out1,os)='vps+(vdiff_r*53/100)' fall=1
+.meas tran rp054 when V(out1,os)='vps+(vdiff_r*54/100)' fall=1
+.meas tran rp055 when V(out1,os)='vps+(vdiff_r*55/100)' fall=1
+.meas tran rp056 when V(out1,os)='vps+(vdiff_r*56/100)' fall=1
+.meas tran rp057 when V(out1,os)='vps+(vdiff_r*57/100)' fall=1
+.meas tran rp058 when V(out1,os)='vps+(vdiff_r*58/100)' fall=1
+.meas tran rp059 when V(out1,os)='vps+(vdiff_r*59/100)' fall=1
+.meas tran rp060 when V(out1,os)='vps+(vdiff_r*60/100)' fall=1
+.meas tran rp061 when V(out1,os)='vps+(vdiff_r*61/100)' fall=1
+.meas tran rp062 when V(out1,os)='vps+(vdiff_r*62/100)' fall=1
+.meas tran rp063 when V(out1,os)='vps+(vdiff_r*63/100)' fall=1
+.meas tran rp064 when V(out1,os)='vps+(vdiff_r*64/100)' fall=1
+.meas tran rp065 when V(out1,os)='vps+(vdiff_r*65/100)' fall=1
+.meas tran rp066 when V(out1,os)='vps+(vdiff_r*66/100)' fall=1
+.meas tran rp067 when V(out1,os)='vps+(vdiff_r*67/100)' fall=1
+.meas tran rp068 when V(out1,os)='vps+(vdiff_r*68/100)' fall=1
+.meas tran rp069 when V(out1,os)='vps+(vdiff_r*69/100)' fall=1
+.meas tran rp070 when V(out1,os)='vps+(vdiff_r*70/100)' fall=1
+.meas tran rp071 when V(out1,os)='vps+(vdiff_r*71/100)' fall=1
+.meas tran rp072 when V(out1,os)='vps+(vdiff_r*72/100)' fall=1
+.meas tran rp073 when V(out1,os)='vps+(vdiff_r*73/100)' fall=1
+.meas tran rp074 when V(out1,os)='vps+(vdiff_r*74/100)' fall=1
+.meas tran rp075 when V(out1,os)='vps+(vdiff_r*75/100)' fall=1
+.meas tran rp076 when V(out1,os)='vps+(vdiff_r*76/100)' fall=1
+.meas tran rp077 when V(out1,os)='vps+(vdiff_r*77/100)' fall=1
+.meas tran rp078 when V(out1,os)='vps+(vdiff_r*78/100)' fall=1
+.meas tran rp079 when V(out1,os)='vps+(vdiff_r*79/100)' fall=1
+.meas tran rp080 when V(out1,os)='vps+(vdiff_r*80/100)' fall=1
+.meas tran rp081 when V(out1,os)='vps+(vdiff_r*81/100)' fall=1
+.meas tran rp082 when V(out1,os)='vps+(vdiff_r*82/100)' fall=1
+.meas tran rp083 when V(out1,os)='vps+(vdiff_r*83/100)' fall=1
+.meas tran rp084 when V(out1,os)='vps+(vdiff_r*84/100)' fall=1
+.meas tran rp085 when V(out1,os)='vps+(vdiff_r*85/100)' fall=1
+.meas tran rp086 when V(out1,os)='vps+(vdiff_r*86/100)' fall=1
+.meas tran rp087 when V(out1,os)='vps+(vdiff_r*87/100)' fall=1
+.meas tran rp088 when V(out1,os)='vps+(vdiff_r*88/100)' fall=1
+.meas tran rp089 when V(out1,os)='vps+(vdiff_r*89/100)' fall=1
+.meas tran rp090 when V(out1,os)='vps+(vdiff_r*90/100)' fall=1
+.meas tran rp091 when V(out1,os)='vps+(vdiff_r*91/100)' fall=1
+.meas tran rp092 when V(out1,os)='vps+(vdiff_r*92/100)' fall=1
+.meas tran rp093 when V(out1,os)='vps+(vdiff_r*93/100)' fall=1
+.meas tran rp094 when V(out1,os)='vps+(vdiff_r*94/100)' fall=1
+.meas tran rp095 when V(out1,os)='vps+(vdiff_r*95/100)' fall=1
+.meas tran rp096 when V(out1,os)='vps+(vdiff_r*96/100)' fall=1
+.meas tran rp097 when V(out1,os)='vps+(vdiff_r*97/100)' fall=1
+.meas tran rp098 when V(out1,os)='vps+(vdiff_r*98/100)' fall=1
+.meas tran rp099 when V(out1,os)='vps+(vdiff_r*99/100)' fall=1
+*.meas tran rp100 when V(out1,os)='vps+(vdiff_r*100/120)' fall=1
+*.meas tran rp101 when V(out1,os)='vps+(vdiff_r*101/120)' fall=1
+*.meas tran rp102 when V(out1,os)='vps+(vdiff_r*102/120)' fall=1
+*.meas tran rp103 when V(out1,os)='vps+(vdiff_r*103/120)' fall=1
+*.meas tran rp104 when V(out1,os)='vps+(vdiff_r*104/120)' fall=1
+*.meas tran rp105 when V(out1,os)='vps+(vdiff_r*105/120)' fall=1
+*.meas tran rp106 when V(out1,os)='vps+(vdiff_r*106/120)' fall=1
+*.meas tran rp107 when V(out1,os)='vps+(vdiff_r*107/120)' fall=1
+*.meas tran rp108 when V(out1,os)='vps+(vdiff_r*108/120)' fall=1
+*.meas tran rp109 when V(out1,os)='vps+(vdiff_r*109/120)' fall=1
+*.meas tran rp110 when V(out1,os)='vps+(vdiff_r*110/120)' fall=1
+*.meas tran rp111 when V(out1,os)='vps+(vdiff_r*111/120)' fall=1
+*.meas tran rp112 when V(out1,os)='vps+(vdiff_r*112/120)' fall=1
+*.meas tran rp113 when V(out1,os)='vps+(vdiff_r*113/120)' fall=1
+*.meas tran rp114 when V(out1,os)='vps+(vdiff_r*114/120)' fall=1
+*.meas tran rp115 when V(out1,os)='vps+(vdiff_r*115/120)' fall=1
+*.meas tran rp116 when V(out1,os)='vps+(vdiff_r*116/120)' fall=1
+*.meas tran rp117 when V(out1,os)='vps+(vdiff_r*117/120)' fall=1
+*.meas tran rp118 when V(out1,os)='vps+(vdiff_r*118/120)' fall=1
+*.meas tran rp119 when V(out1,os)='vps+(vdiff_r*119/120)' fall=1
+*.meas tran dummy2 when V(out1,os)=vpt  **取得終わりの目印となるダミー**
+
+*****< fall_check_start >*****
+.meas tran dummy3 when V(out2,os)=vns *取得初めの目印となるダミー*
+.meas tran fp001 when V(out2,os)='vns-(vdiff_f*1/100)' rise=1
+.meas tran fp002 when V(out2,os)='vns-(vdiff_f*2/100)' rise=1
+.meas tran fp003 when V(out2,os)='vns-(vdiff_f*3/100)' rise=1
+.meas tran fp004 when V(out2,os)='vns-(vdiff_f*4/100)' rise=1
+.meas tran fp005 when V(out2,os)='vns-(vdiff_f*5/100)' rise=1
+.meas tran fp006 when V(out2,os)='vns-(vdiff_f*6/100)' rise=1
+.meas tran fp007 when V(out2,os)='vns-(vdiff_f*7/100)' rise=1
+.meas tran fp008 when V(out2,os)='vns-(vdiff_f*8/100)' rise=1
+.meas tran fp009 when V(out2,os)='vns-(vdiff_f*9/100)' rise=1
+.meas tran fp010 when V(out2,os)='vns-(vdiff_f*10/100)' rise=1
+.meas tran fp011 when V(out2,os)='vns-(vdiff_f*11/100)' rise=1
+.meas tran fp012 when V(out2,os)='vns-(vdiff_f*12/100)' rise=1
+.meas tran fp013 when V(out2,os)='vns-(vdiff_f*13/100)' rise=1
+.meas tran fp014 when V(out2,os)='vns-(vdiff_f*14/100)' rise=1
+.meas tran fp015 when V(out2,os)='vns-(vdiff_f*15/100)' rise=1
+.meas tran fp016 when V(out2,os)='vns-(vdiff_f*16/100)' rise=1
+.meas tran fp017 when V(out2,os)='vns-(vdiff_f*17/100)' rise=1
+.meas tran fp018 when V(out2,os)='vns-(vdiff_f*18/100)' rise=1
+.meas tran fp019 when V(out2,os)='vns-(vdiff_f*19/100)' rise=1
+.meas tran fp020 when V(out2,os)='vns-(vdiff_f*20/100)' rise=1
+.meas tran fp021 when V(out2,os)='vns-(vdiff_f*21/100)' rise=1
+.meas tran fp022 when V(out2,os)='vns-(vdiff_f*22/100)' rise=1
+.meas tran fp023 when V(out2,os)='vns-(vdiff_f*23/100)' rise=1
+.meas tran fp024 when V(out2,os)='vns-(vdiff_f*24/100)' rise=1
+.meas tran fp025 when V(out2,os)='vns-(vdiff_f*25/100)' rise=1
+.meas tran fp026 when V(out2,os)='vns-(vdiff_f*26/100)' rise=1
+.meas tran fp027 when V(out2,os)='vns-(vdiff_f*27/100)' rise=1
+.meas tran fp028 when V(out2,os)='vns-(vdiff_f*28/100)' rise=1
+.meas tran fp029 when V(out2,os)='vns-(vdiff_f*29/100)' rise=1
+.meas tran fp030 when V(out2,os)='vns-(vdiff_f*30/100)' rise=1
+.meas tran fp031 when V(out2,os)='vns-(vdiff_f*31/100)' rise=1
+.meas tran fp032 when V(out2,os)='vns-(vdiff_f*32/100)' rise=1
+.meas tran fp033 when V(out2,os)='vns-(vdiff_f*33/100)' rise=1
+.meas tran fp034 when V(out2,os)='vns-(vdiff_f*34/100)' rise=1
+.meas tran fp035 when V(out2,os)='vns-(vdiff_f*35/100)' rise=1
+.meas tran fp036 when V(out2,os)='vns-(vdiff_f*36/100)' rise=1
+.meas tran fp037 when V(out2,os)='vns-(vdiff_f*37/100)' rise=1
+.meas tran fp038 when V(out2,os)='vns-(vdiff_f*38/100)' rise=1
+.meas tran fp039 when V(out2,os)='vns-(vdiff_f*39/100)' rise=1
+.meas tran fp040 when V(out2,os)='vns-(vdiff_f*40/100)' rise=1
+.meas tran fp041 when V(out2,os)='vns-(vdiff_f*41/100)' rise=1
+.meas tran fp042 when V(out2,os)='vns-(vdiff_f*42/100)' rise=1
+.meas tran fp043 when V(out2,os)='vns-(vdiff_f*43/100)' rise=1
+.meas tran fp044 when V(out2,os)='vns-(vdiff_f*44/100)' rise=1
+.meas tran fp045 when V(out2,os)='vns-(vdiff_f*45/100)' rise=1
+.meas tran fp046 when V(out2,os)='vns-(vdiff_f*46/100)' rise=1
+.meas tran fp047 when V(out2,os)='vns-(vdiff_f*47/100)' rise=1
+.meas tran fp048 when V(out2,os)='vns-(vdiff_f*48/100)' rise=1
+.meas tran fp049 when V(out2,os)='vns-(vdiff_f*49/100)' rise=1
+.meas tran fp050 when V(out2,os)='vns-(vdiff_f*50/100)' rise=1
+.meas tran fp051 when V(out2,os)='vns-(vdiff_f*51/100)' rise=1
+.meas tran fp052 when V(out2,os)='vns-(vdiff_f*52/100)' rise=1
+.meas tran fp053 when V(out2,os)='vns-(vdiff_f*53/100)' rise=1
+.meas tran fp054 when V(out2,os)='vns-(vdiff_f*54/100)' rise=1
+.meas tran fp055 when V(out2,os)='vns-(vdiff_f*55/100)' rise=1
+.meas tran fp056 when V(out2,os)='vns-(vdiff_f*56/100)' rise=1
+.meas tran fp057 when V(out2,os)='vns-(vdiff_f*57/100)' rise=1
+.meas tran fp058 when V(out2,os)='vns-(vdiff_f*58/100)' rise=1
+.meas tran fp059 when V(out2,os)='vns-(vdiff_f*59/100)' rise=1
+.meas tran fp060 when V(out2,os)='vns-(vdiff_f*60/100)' rise=1
+.meas tran fp061 when V(out2,os)='vns-(vdiff_f*61/100)' rise=1
+.meas tran fp062 when V(out2,os)='vns-(vdiff_f*62/100)' rise=1
+.meas tran fp063 when V(out2,os)='vns-(vdiff_f*63/100)' rise=1
+.meas tran fp064 when V(out2,os)='vns-(vdiff_f*64/100)' rise=1
+.meas tran fp065 when V(out2,os)='vns-(vdiff_f*65/100)' rise=1
+.meas tran fp066 when V(out2,os)='vns-(vdiff_f*66/100)' rise=1
+.meas tran fp067 when V(out2,os)='vns-(vdiff_f*67/100)' rise=1
+.meas tran fp068 when V(out2,os)='vns-(vdiff_f*68/100)' rise=1
+.meas tran fp069 when V(out2,os)='vns-(vdiff_f*69/100)' rise=1
+.meas tran fp070 when V(out2,os)='vns-(vdiff_f*70/100)' rise=1
+.meas tran fp071 when V(out2,os)='vns-(vdiff_f*71/100)' rise=1
+.meas tran fp072 when V(out2,os)='vns-(vdiff_f*72/100)' rise=1
+.meas tran fp073 when V(out2,os)='vns-(vdiff_f*73/100)' rise=1
+.meas tran fp074 when V(out2,os)='vns-(vdiff_f*74/100)' rise=1
+.meas tran fp075 when V(out2,os)='vns-(vdiff_f*75/100)' rise=1
+.meas tran fp076 when V(out2,os)='vns-(vdiff_f*76/100)' rise=1
+.meas tran fp077 when V(out2,os)='vns-(vdiff_f*77/100)' rise=1
+.meas tran fp078 when V(out2,os)='vns-(vdiff_f*78/100)' rise=1
+.meas tran fp079 when V(out2,os)='vns-(vdiff_f*79/100)' rise=1
+.meas tran fp080 when V(out2,os)='vns-(vdiff_f*80/100)' rise=1
+.meas tran fp081 when V(out2,os)='vns-(vdiff_f*81/100)' rise=1
+.meas tran fp082 when V(out2,os)='vns-(vdiff_f*82/100)' rise=1
+.meas tran fp083 when V(out2,os)='vns-(vdiff_f*83/100)' rise=1
+.meas tran fp084 when V(out2,os)='vns-(vdiff_f*84/100)' rise=1
+.meas tran fp085 when V(out2,os)='vns-(vdiff_f*85/100)' rise=1
+.meas tran fp086 when V(out2,os)='vns-(vdiff_f*86/100)' rise=1
+.meas tran fp087 when V(out2,os)='vns-(vdiff_f*87/100)' rise=1
+.meas tran fp088 when V(out2,os)='vns-(vdiff_f*88/100)' rise=1
+.meas tran fp089 when V(out2,os)='vns-(vdiff_f*89/100)' rise=1
+.meas tran fp090 when V(out2,os)='vns-(vdiff_f*90/100)' rise=1
+.meas tran fp091 when V(out2,os)='vns-(vdiff_f*91/100)' rise=1
+.meas tran fp092 when V(out2,os)='vns-(vdiff_f*92/100)' rise=1
+.meas tran fp093 when V(out2,os)='vns-(vdiff_f*93/100)' rise=1
+.meas tran fp094 when V(out2,os)='vns-(vdiff_f*94/100)' rise=1
+.meas tran fp095 when V(out2,os)='vns-(vdiff_f*95/100)' rise=1
+.meas tran fp096 when V(out2,os)='vns-(vdiff_f*96/100)' rise=1
+.meas tran fp097 when V(out2,os)='vns-(vdiff_f*97/100)' rise=1
+.meas tran fp098 when V(out2,os)='vns-(vdiff_f*98/100)' rise=1
+.meas tran fp099 when V(out2,os)='vns-(vdiff_f*99/100)' rise=1
+*.meas tran fp100 when V(out2,os)='vns-(vdiff_f*100/120)' rise=1
+*.meas tran fp101 when V(out2,os)='vns-(vdiff_f*101/120)' rise=1
+*.meas tran fp102 when V(out2,os)='vns-(vdiff_f*102/120)' rise=1
+*.meas tran fp103 when V(out2,os)='vns-(vdiff_f*103/120)' rise=1
+*.meas tran fp104 when V(out2,os)='vns-(vdiff_f*104/120)' rise=1
+*.meas tran fp105 when V(out2,os)='vns-(vdiff_f*105/120)' rise=1
+*.meas tran fp106 when V(out2,os)='vns-(vdiff_f*106/120)' rise=1
+*.meas tran fp107 when V(out2,os)='vns-(vdiff_f*107/120)' rise=1
+*.meas tran fp108 when V(out2,os)='vns-(vdiff_f*108/120)' rise=1
+*.meas tran fp109 when V(out2,os)='vns-(vdiff_f*109/120)' rise=1
+*.meas tran fp110 when V(out2,os)='vns-(vdiff_f*110/120)' rise=1
+*.meas tran fp111 when V(out2,os)='vns-(vdiff_f*111/120)' rise=1
+*.meas tran fp112 when V(out2,os)='vns-(vdiff_f*112/120)' rise=1
+*.meas tran fp113 when V(out2,os)='vns-(vdiff_f*113/120)' rise=1
+*.meas tran fp114 when V(out2,os)='vns-(vdiff_f*114/120)' rise=1
+*.meas tran fp115 when V(out2,os)='vns-(vdiff_f*115/120)' rise=1
+*.meas tran fp116 when V(out2,os)='vns-(vdiff_f*116/120)' rise=1
+*.meas tran fp117 when V(out2,os)='vns-(vdiff_f*117/120)' rise=1
+*.meas tran fp118 when V(out2,os)='vns-(vdiff_f*118/120)' rise=1
+*.meas tran fp119 when V(out2,os)='vns-(vdiff_f*119/120)' rise=1
+.meas tran dummy4 when V(out2,os)=vnt  **取得終わりの目印となるダミー**
+
+.endl

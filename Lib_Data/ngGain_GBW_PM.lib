@@ -1,0 +1,29 @@
+*****< Circuit for Gain, Gain Bandwidth, and Phase Mergin >*****
+
+*****< Option >*****
+.lib '../Lib_Data/Option.lib' ngspice
+
+*****< MOSFET MODEL >*****
+.lib '../Lib_Data/tsmc018.lib' model27
+
+*****< Main Stage >*****
+.lib '../Sp_Data/OPamp.sp' opamp
+
+*****< Parameters >*****
+.param half='psvoltage/2'
+.param valrl=20k
+.param valrf=1T
+.param valcf=1m
+
+*****< Power_Supply >*****
+VDD	vdd gnd	{half}
+VSS	gnd vss	{half}
+
+******< Input >******
+VIN	inp gnd dc 0 ac 1
+
+******< Circuit Topology >******
+X1 inm inp out vdd vss opamp
+RL  out gnd {valrl}
+RF  out inm {valrf}
+CF  inm gnd {valcf}

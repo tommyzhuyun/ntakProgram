@@ -1,0 +1,28 @@
+*****< Circuit for THD >*****
+
+*****< Option >*****
+.lib '../Lib_Data/Option.lib' ngspice
+
+*****< MOSFET MODEL >*****
+.lib '../Lib_Data/tsmc018.lib' model27
+
+*****< Main Stage >*****
+.lib '../Sp_Data/OPamp.sp' opamp
+
+*****< Parameters >*****
+.param half='psvoltage/2'
+.param valr1=10k
+.param valr2=10k
+
+*****< Power_Supply >*****
+VDD	vdd gnd	PULSE 0 half 0 0.1n 0.1n 1.5015 2.002
+VSS	gnd vss	PULSE 0 half 0 0.1n 0.1n 1.5015 2.002
+
+******< Input >******
+VIN	inp gnd dc 0 SIN 0 2.5m 100 1m
+* VIN	inp gnd dc 0 SIN 0 2.5m 100
+
+*****< Circuit Topology >*****
+Xthd inm inp out vdd vss opamp
+R1 inm gnd {valr1}
+R2 out inm {valr2}

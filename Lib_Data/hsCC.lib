@@ -1,0 +1,35 @@
+*****< 消費電流 & 消費電力算出用テストベンチ >*****
+.lib CC
+
+*****< Parameters >*****
+.param half='psvoltage/2'
+.param valr1=10k
+.param valr2=10k
+
+*****< Power_Supply >*****
+VDD	vdd gnd 'step'
+VSS	gnd vss 'step'
+
+******< Input >******
+VIN	inp gnd dc 0
+
+*****< Circuit Topology >*****
+Xcc inm inp out vdd vss opamp
+R1 inm gnd valr1
+R2 out inm valr2
+
+******< Control >******
+* sweep コマンドでパラメータをスイープ
+* 電源の変数"step" を 3点で（POI 3）でスイープ
+* これが使えるのは DC/AC/TRAN 解析の場合のみ
+*
+.DC VIN -0.01 0.01 0.01 SWEEP step POI 3 '0.9*half' 'half' '1.1*half'
+.TEMP -40 25 80
+
+******< Measure command >******
+.MEAS DC ivdd FIND I(VDD) AT=0
+.MEAS DC ivss FIND I(VSS) AT=0
+.MEAS DC ib   PARAM='max(abs(ivdd),abs(ivss))'
+.MEAS DC pdis PARAM='ib*2*step'
+
+.endl

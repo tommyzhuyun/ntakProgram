@@ -1,0 +1,94 @@
+***< 同相入力範囲算出用テストベンチ >***
+.lib CMIR
+
+*****< Parameters >*****
+.param half='psvoltage/2'
+.param rload=20k
+.param bgain=10
+* .param gain=0.5
+
+*****< Power_Supply >*****
+VDD vdd gnd 'half'
+VSS gnd vss 'half'
+
+******< Input >******
+VIN in1 gnd dc 0
+E1 gnd in2 in1 gnd 1
+
+*****< Circuit Topology >*****
+* Positive side
+X1a inm1 inp1 outx1 vdd vss opamp
+R1a in1 inp1 'rload/2'
+R2a inp1 gnd 'rload/2'
+R3a in1 inm1 'rload/2'
+R4a inm1 out1 rload
+E1a out1 gnd outx1 gnd bgain
+R5a outx1 gnd rload
+
+* Negative side
+X1b inm2 inp2 outx2 vdd vss opamp
+R1b in2 inp2 'rload/2'
+R2b inp2 gnd 'rload/2'
+R3b in2 inm2 'rload/2'
+R4b inm2 out2 rload
+E1b out2 gnd outx2 gnd bgain
+R5b outx2 gnd rload
+
+* offset voltage
+X2 inm3 gnd osx vdd vss opamp
+R12 gnd inm3 'rload/2'
+R22 inm3 os rload
+E2 os gnd osx gnd bgain
+R32 osx gnd rload
+
+******< Control >******
+.DC VIN 10m psvoltage '(psvoltage-10m)/1000'
+* .PRINT V(out1,os) V(out2,os)
+* + PAR'1-ABS(V(out1,os))/((0.5)*V(in1))' PAR'1-ABS(V(out2,os))/((0.5)*V(in1))'
+.print PAR'1-ABS(V(out1,os))/((0.5)*V(in1))' PAR'1-ABS(V(out2,os))/((0.5)*V(in1))'
+.TEMP 25
+
+
+******< Measure command >******
+.MEAS DC psvoltage param=psvoltage
+.MEAS DC Vcmrn find V(in1) When par'1-ABS(V(out1,os))/((0.5)*V(in1))'=0.05 rise=1
+.MEAS DC Vcmrp find V(in1) When par'1-ABS(V(out2,os))/((0.5)*V(in1))'=0.05 rise=1
+*.IF (Vcmrn=='failed')
+*.MEAS DC Vcmrn param=0.5*psvoltage
+*.ENDIF
+*.IF (Vcmrp=='failed')
+*.MEAS DC Vcmrp param=0.5*psvoltage
+*.ENDIF
+.MEAS DC Vcmr param= Vcmrp+Vcmrn
+.MEAS DC cmr param=50*Vcmr/psvoltage
+
+
+******< Measure command >******
+* .param Vcmirpp=0
+* .param Vcmirpn=0
+* .param Vcmirnp=0
+* .param Vcmirnn=0
+* .MEAS DC Vcmirpp find V(in1) When par'1-ABS(V(out1,os))/((0.5)*V(in1))'=0.05 rise=1
+* .MEAS DC Vcmirpn find V(in1) When par'1-ABS(V(out1,os))/((0.5)*V(in1))'=-0.05 rise=1
+* .MEAS DC Vcmirnp find V(in1) When par'1-ABS(V(out2,os))/((0.5)*V(in1))'=0.05 rise=1
+* .MEAS DC Vcmirnn find V(in1) When par'1-ABS(V(out2,os))/((0.5)*V(in1))'=-0.05 rise=1
+* * .if ( Vcmirpp == 0 || Vcmirpn == 0 )
+*   .MEAS Vcmirp param="Vcmirpp ? Vcmirpp : Vcmirpn"
+* .else
+*   .MEAS Vcmirp param='0.5*psvoltage'
+* .endif
+* .if (Vcmirnp=="failed" || Vcmirnn=="failed")
+*   .MEAS Vcmirn param="Vcmirnp ? Vcmirnp : Vcmirnn"
+* .else
+*   .MEAS Vcmirn param='0.5*psvoltage'
+* *  .MEAS Vcmirn param=vcmirnp
+* .endif
+
+* .print fooo=par(Vcmirnp)
+
+* .MEAS Vcmrp param='Vcmirpp+Vcmirpn'
+* .MEAS Vcmrn param='Vcmirnp+Vcmirnn'
+* .MEAS cmr param=100*Vcmr/psvoltage
+
+.endl
+

@@ -1,0 +1,44 @@
+*****< 出力電圧範囲用テストベンチ >*****
+.lib OVR
+
+*****< Parameters >*****
+.param half='psvoltage/2'
+.param rload=20k
+
+*****< Power_Supply >*****
+VDD vdd gnd 'half'
+VSS gnd vss 'half'
+
+******< Input >******
+VIN in1 gnd dc 0
+E1  gnd in2 in1 gnd 1
+
+*****< Circuit Topology >*****
+* Positive side
+X1a inm1 gnd out1 vdd vss opamp
+R1a in1 inm1 rload
+R2a inm1 out1 rload
+
+* Negative side
+X1b inm2 gnd out2 vdd vss opamp
+R1b in2 inm2 rload
+R2b inm2 out2 rload
+
+* offset voltage
+X1c inm3 gnd os vdd vss opamp
+R1c gnd inm3 rload
+R2c inm3 os  rload
+
+******< Control >******
+.DC VIN 10m half '(half-10m)/1000'
+* .PRINT V(out1,os) V(out2,os)
+* + PAR'1-ABS(V(out1,os))/V(in1)' PAR'1-ABS(V(out2,os))/V(in1)'
+.TEMP 25
+
+******< Measure command >******
+.MEAS DC Vorn find V(in1) When par'1-ABS(V(out1,os))/V(in1)'=0.05 rise=1
+.MEAS DC Vorp find V(in1) When par'1-ABS(V(out2,os))/V(in1)'=0.05 rise=1
+.MEAS DC Vor param=Vorp+Vorn
+.MEAS DC ovr param=100*Vor/psvoltage
+
+.endl

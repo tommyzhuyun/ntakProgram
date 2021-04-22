@@ -1,0 +1,28 @@
+*****< 入力換算雑音算出用テストベンチ >*****
+.lib IRN
+
+*****< Parameters >*****
+.param half='psvoltage/2'
+.param valr1=10k
+.param valr2=10k
+
+*****< Power_Supply >*****
+VDD	vdd gnd	'half'
+VSS	gnd vss	'half'
+
+******< Input >******
+VIN	inp gnd dc 0
+R1 inm gnd nores valr1
+R2 out inm nores valr2
+
+*****< Circuit Topology >*****
+Xirn inm inp out vdd vss opamp
+*** NAME INM INP OUT VDD VSS
+
+******< Control >******
+.AC DEC 100 0.1 1Meg
+.NOISE V(out) VIN 10
+.MODEL nores R noise=0
+.TEMP 25
+
+.endl

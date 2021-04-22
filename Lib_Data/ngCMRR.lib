@@ -1,0 +1,34 @@
+*****< Circuit for CMRR >*****
+
+*****< Option >*****
+.lib '../Lib_Data/Option.lib' ngspice
+
+*****< MOSFET MODEL >*****
+.lib '../Lib_Data/tsmc018.lib' model27
+
+*****< Main Stage >*****
+.lib '../Sp_Data/OPamp.sp' opamp
+
+*****< Parameters >*****
+.param half='psvoltage/2'
+.param valrl=20k
+.param valrf=1T
+.param valcf=10m
+
+*****< Power_Supply >*****
+VDD vdd gnd {half}
+VSS gnd vss {half}
+
+******< Input >******
+VIN inp gnd dc 0 ac 1
+
+*****< Circuit Topology >*****
+X1 inm1 inp oc vdd vss opamp
+R11 oc inm1 {valrf}
+C11 inm1 inp {valcf}
+R21 oc gnd {valrl}
+
+X2 inm2 inp od vdd vss opamp
+R12 od inm2 {valrf}
+C12 inm2 gnd  {valcf}
+R22 od gnd  {valrl}

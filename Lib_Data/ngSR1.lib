@@ -1,0 +1,39 @@
+*****< Circuit for Slew Rate 1 >*****
+
+*****< Option >*****
+.lib '../Lib_Data/Option.lib' ngspice
+
+*****< MOSFET MODEL >*****
+.lib '../Lib_Data/tsmc018.lib' model27
+
+*****< Main Stage >*****
+.lib '../Sp_Data/OPamp.sp' opamp
+
+*****< Parameters >*****
+.param half='psvoltage/2'
+.param valr1=10k
+.param valr2=10k
+
+*****< Power_Supply >*****
+VDD	vdd gnd	{half}
+VSS	gnd vss	{half}
+
+******< Input >******
+VIN in1 gnd dc 0
+E1  gnd in2 in1 gnd 1
+
+******< Circuit Topology >******
+* For rise edge slewrate
+X1a inm1 in1 out1 vdd vss opamp
+R1a inm1 gnd {valr1}
+R2a out1 inm1 {valr2}
+
+* For fall edge slewrate
+X1b inm2 in2 out2 vdd vss opamp
+R1b inm2 gnd {valr1}
+R2b out2 inm2 {valr2}
+
+* Offset voltage
+X1c inm3 gnd os vdd vss opamp
+R1c inm3 gnd {valr1}
+R2c inm3 os  {valr2}
