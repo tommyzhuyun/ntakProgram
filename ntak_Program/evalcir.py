@@ -398,6 +398,12 @@ class EvalCir:
             self.eval_result[eval_name] = "{:.6E}".format(eval(formula))
         # print(result)
 
+    def get_eval_list(self):
+        return self.eval_result
+
+    def get_requirements(self):
+        return self.requirements_list
+
     def print_msg(self, msg):
         self.extractor.print_msg(msg)
 

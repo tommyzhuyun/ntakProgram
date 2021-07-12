@@ -2,7 +2,8 @@
 
 import subprocess
 import os
-
+import threading
+import atexit
 
 class Spice:
 
@@ -42,6 +43,7 @@ class Spice:
 
     LIB_PREFIX = ""  # 各 lib ファイルにつく接頭文字列。Hspice="hs", Ngspice="ng"
 
+
     def __init__(self):
         self.cmd = []  # 実行時のコマンド配列
         self.port = None  # Hspice 実行時の -port 引数の値
@@ -49,6 +51,7 @@ class Spice:
         self.cir_file = None  # Main stage's file path
         self.extractor = None  # Extractor 結果抽出用クラス
         self.hpspice_outfile = None  # Hspice 実行結果を保存するファイル名
+        #self.threadlock = threading.Lock()
 
     def set_port(self, port):
         """
@@ -102,12 +105,12 @@ class Spice:
             item == None の場合、全要素の結果値を dict に入れて返す。
             何らかの要素を指定された場合は、その値を返す。
         """
-
         self.sp_filename = sp_filename
 
         if not os.path.exists(sp_filename):
             raise FileNotFoundException("Spice.simulate(): "+sp_filename)
 
+        #print(f"execSpice: cmd: {cmd}")
         result = ""
         try:
             if spice_type == 'ngspice':
@@ -116,10 +119,12 @@ class Spice:
                     stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
                 """
                 o = subprocess.run(cmd, shell=False, check=False, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL)
+
                 # check=Trueにすると、CalledProcessErrorが発生してしまう
                 # print(o.stdout)
                 result = o.stdout.decode('utf_8')
                 # print(result)
+
             elif spice_type == 'hspice':
                 with open(self.hpspice_outfile, 'w') as fp:
                     # Hspice 実行結果をファイルに保存
@@ -166,7 +171,7 @@ class Spice:
             print(e)
 
         self.extractor.set_sim_result_str(tmp_result)
-
+        #print(tmp_result)
         result = dict()  # dict 型で返す
         if item:
             if isinstance(item, list):

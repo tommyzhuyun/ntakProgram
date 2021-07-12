@@ -91,6 +91,9 @@ class Extractor:
         # Decimal の有効桁数 6桁
         getcontext().prec = 6
 
+        # SR のチェックメッセージを表示
+        self.SR_msg_flag = False
+
     def set_sim_result_str(self, sim_result_str):
         """
         spiceによるシミュレーション結果文字列をセット
@@ -626,21 +629,35 @@ class Extractor:
             #   (2)データ列の最後の100点の出力電圧のabs(各点のデータ - Vave)/Vave が全て 0.01 以内にある
             # ③定常値Vave が「abs(2*vp) の 1% 以内」にない場合はメッセージ出力
 
-            # vpt を最初に超えた時点のインデックスを取得
-            index_list = np.where(np_data[:, 2] > vpt)[0].tolist()
-            over_vpt_index = int(index_list[0])
-            self.print_msg("SR: Checking for rise....")
+            if self.SR_msg_flag:
+                self.print_msg("SR: Checking for rise....")
 
             ########## 立ち上がりチェック ###########
 
-            # ①1回目の定常値vptに到達するまでに、立ち上がりと立ち下がりを繰り返しているかどうか
-            # 　立ち上がり時のチェックなので、傾きがマイナスになったらメッセージ出力
-            diff = np.diff(np_data[0:over_vpt_index, 2], axis=0)
-            if np.count_nonzero(diff < 0.0) > 0:
-                minus_slope_index = (np.where(diff < 0.0)[0]).tolist()[0]
-                self.print_msg("\tRise: **************** CAUTION ****************")
-                self.print_msg("\tRise: Not monotonically increasing: index={}\n" \
-                                    .format(offset + 1 + minus_slope_index))
+            # ①100ns 後から1回目の定常値vptに到達するまでに、立ち上がりと立ち下がりを繰り返しているかどうか
+            # vpt を最初に超えた時点のインデックスを取得
+            index_list = np.where(np_data[:, 2] > vpt)[0].tolist()
+            if index_list:
+                # vpt より大きいデータあり
+                # 立ち上がり時のチェックなので、傾きがマイナスになったらメッセージ出力
+                over_vpt_index = int(index_list[0])
+                diff = np.diff(np_data[0:over_vpt_index, 2], axis=0)
+                if np.count_nonzero(diff < 0.0) > 0:
+                    minus_slope_index = (np.where(diff < 0.0)[0]).tolist()[0]
+                    if self.SR_msg_flag:
+                        self.print_msg("\tRise: **************** CAUTION ****************")
+                        self.print_msg("\tRise: Not monotonically increasing: index={}\n"
+                                       .format(offset + 1 + minus_slope_index))
+            else:
+                # vpt より大きいデータがない => 最大値が vpt と等しければ問題なし
+                index_list2 = np.where(np_data[:, 2] == vpt)[0].tolist()
+                if index_list2:
+                    # 問題なし
+                    pass
+                else:
+                    # すべてのデータが vpt より小さい -> エラー
+                    self.print_msg("\tFall: **************** CAUTION ****************")
+                    self.print_msg(f"\tFall: all data is less than vpt:{vpt}")
 
             # ②1回目の定常値以降、発振していないこと
             # (1)データ列の最後の100点の出力電圧の平均値を算出 = Vave
@@ -665,36 +682,53 @@ class Extractor:
             # (2)データ列の最後の100点の出力電圧のabs(各点のデータ - Vave)/Vave が全て 0.01 以内にあるかチェック
             tmp_data = np.abs(last_100_data - v_ave)
             if np.where(tmp_data > abs(v_ave) * 0.01)[0].size != 0:
-                self.print_msg("\tRise: **************** CAUTION ****************")
-                self.print_msg("\tRise: Oscillations: There is a point that does not fall within 1% error\n")
+                if self.SR_msg_flag:
+                    self.print_msg("\tRise: **************** CAUTION ****************")
+                    self.print_msg("\tRise: Oscillations: There is a point that does not fall within 1% error\n")
 
             # ③定常値Vave が「abs(2*vp) の 1% 以内」にない場合はメッセージ出力
             if abs(abs(2*vp)-abs(v_ave)) > (abs(v_ave)*0.01):
-                self.print_msg("\tRise: **************** CAUTION ****************")
-                self.print_msg("\tRise: V_ave are not within 1% of abs(2*vp).\n")
-
+                if self.SR_msg_flag:
+                    self.print_msg("\tRise: **************** CAUTION ****************")
+                    self.print_msg("\tRise: V_ave are not within 1% of abs(2*vp).\n")
 
             ########## 立ち下がりチェック ###########
             # 立ち下がりチェック事項
-            # ①100ns 後から1回目の定常値vpnに到達するまでに、立ち上がりと立ち下がりを繰り返しているかどうか
+            # ①100ns 後から1回目の定常値vntに到達するまでに、立ち上がりと立ち下がりを繰り返しているかどうか
             # ②1回目の定常値以降、発振していないこと
             #   発振の定義：
             #   (1)データ列の最後の100点の出力電圧の平均値を算出 = Vave
             #   (2)データ列の最後の100点の出力電圧のabs(各点のデータ - Vave)/Vave が全て 0.01 以内にある
             # ③「Vave が Vp の 1% 以内」にない場合、メッセージを出力
 
+            # ①1回目の定常値vntに到達するまでに、立ち上がりと立ち下がりを繰り返しているかどうか
             # vnt を最初に超えた時点のインデックスを取得
-            index_list = np.where(np_data[:, 3] < vnt)[0].tolist()
-            over_vnt_index = int(index_list[0])
-            self.print_msg("SR: Checking for fall....")
+            if self.SR_msg_flag:
+                self.print_msg("SR: Checking for fall....")
 
-            # ①1回目の定常値vpnに到達するまでに、立ち上がりと立ち下がりを繰り返しているかどうか
-            # 　立ち上がり時のチェックなので、傾きがマイナスになったらメッセージ出力
-            diff = np.diff(np_data[0:over_vnt_index, 3], axis=0)
-            if np.count_nonzero(diff > 0.0) > 0:
-                plus_slope_index = (np.where(diff > 0.0)[0]).tolist()[0]
-                self.print_msg("\tFall: **************** CAUTION ****************")
-                self.print_msg("\tFall: Not monotonically increasing: index={}\n".format(offset + 1 + plus_slope_index))
+            index_list = np.where(np_data[:, 3] < vnt)[0].tolist()
+            if index_list:
+                # vnt 未満のデータあり
+                # 立下り時のチェックなので、傾きがプラスになったらメッセージ出力
+                over_vnt_index = int(index_list[0])
+                diff = np.diff(np_data[0:over_vnt_index, 3], axis=0)
+                if np.count_nonzero(diff > 0.0) > 0:
+                    plus_slope_index = (np.where(diff > 0.0)[0]).tolist()[0]
+                    if self.SR_msg_flag:
+                        self.print_msg("\tFall: **************** CAUTION ****************")
+                        self.print_msg("\tFall: Not monotonically decreasing: index={}\n"
+                                       .format(offset + 1 + plus_slope_index))
+            else:
+                # vnt 未満のデータがない => 最小値が vnt と等しければ問題なし
+                index_list2 = np.where(np_data[:, 3] == vnt)[0].tolist()
+                if index_list2:
+                    # 問題なし
+                    pass
+                else:
+                    # すべてのデータが vnt より大きい -> エラー
+                    if self.SR_msg_flag:
+                        self.print_msg("\tFall: **************** CAUTION ****************")
+                        self.print_msg(f"\tFall: all data is more than vnt:{vnt}")
 
             # ②1回目の定常値以降、発振していないこと
             # (1)データ列の最後の100点の出力電圧の平均値を算出 = Vave
@@ -706,15 +740,18 @@ class Extractor:
             # (2)データ列の最後の100点の出力電圧のabs(各点のデータ - Vave)/Vave が全て 0.01 以内にあるかチェック
             tmp_data = np.abs(last_100_data - v_ave)
             if np.where(tmp_data > abs(v_ave) * 0.01)[0].size != 0:
-                self.print_msg("\tFall: **************** CAUTION ****************")
-                self.print_msg("\tFall: Oscillations: There is a point that does not fall within 1% error\n")
+                if self.SR_msg_flag:
+                    self.print_msg("\tFall: **************** CAUTION ****************")
+                    self.print_msg("\tFall: Oscillations: There is a point that does not fall within 1% error\n")
 
             # ③定常値Vave が「abs(2*vp) の 1% 以内」にない場合はメッセージ出力
             if abs(abs(2*vp)-abs(v_ave)) > (abs(v_ave)*0.01):
-                self.print_msg("\tFall: **************** CAUTION ****************")
-                self.print_msg("\tFall: V_ave are not within 1% of abs(2*vp).\n")
+                if self.SR_msg_flag:
+                    self.print_msg("\tFall: **************** CAUTION ****************")
+                    self.print_msg("\tFall: V_ave are not within 1% of abs(2*vp).\n")
 
-            self.print_msg("....done\n\n")
+            if self.SR_msg_flag:
+                self.print_msg("....done\n\n")
 
             return self.extract(self.spice.SR_PATTERN)
 
@@ -766,8 +803,8 @@ class Extractor:
                 # Hspice 実行(hspice2.sp を使用)、実行結果から SR の値を抽出
                 spfile_index = int(self.spice.sp_filename[-4])
                 spfile_index += 1
-                new_spfilename = self.spice.sp_filename[:-4] + str(spfile_index) + ".sp"
-                # print(new_spfilename)
+                new_spfilename = self.spice.sp_filename[:-4] + str(spfile_index) + ".sp"  # hspice2.sp
+                print(new_spfilename)
                 if not Extractor.ACQ_SR_FLAG:
                     Extractor.ACQ_SR_FLAG = True
                 # １回目のシミュレーション結果文字列を退避する
@@ -825,20 +862,33 @@ class Extractor:
                 #   (2)データ列の最後の100点の出力電圧のabs(各点のデータ - Vave)/Vave が全て 0.01 以内にある
                 # ③定常値Vave が「abs(2*vp) の 1% 以内」にない場合はメッセージ出力
 
+                if self.SR_msg_flag:
+                    self.print_msg("SR: Checking for rise....")
+
+                # ①100ns 後から1回目の定常値vptに到達するまでに、立ち上がりと立ち下がりを繰り返しているかどうか
                 # vpt を最初に超えた時点のインデックスを取得
                 index_list = np.where(np_data[:, 2] > vpt)[0].tolist()
-                over_vpt_index = int(index_list[0])
-                self.print_msg("SR: Checking for rise....")
-
-                ########## 立ち上がりチェック ###########
-
-                # ①1回目の定常値vptに到達するまでに、立ち上がりと立ち下がりを繰り返しているかどうか
-                # 　立ち上がり時のチェックなので、傾きがマイナスになったらメッセージ出力
-                diff = np.diff(np_data[0:over_vpt_index, 2], axis=0)
-                if np.count_nonzero(diff < 0.0) > 0:
-                    minus_slope_index = (np.where(diff < 0.0)[0]).tolist()[0]
-                    self.print_msg("\tRise: **************** CAUTION ****************")
-                    self.print_msg("\tRise: Not monotonically increasing: index={}\n".format(offset + 1 + minus_slope_index))
+                if index_list:
+                    # vpt より大きいデータあり
+                    # 立ち上がり時のチェックなので、傾きがマイナスになったらメッセージ出力
+                    over_vpt_index = int(index_list[0])
+                    diff = np.diff(np_data[0:over_vpt_index, 2], axis=0)
+                    if np.count_nonzero(diff < 0.0) > 0:
+                        minus_slope_index = (np.where(diff < 0.0)[0]).tolist()[0]
+                        if self.SR_msg_flag:
+                            self.print_msg("\tRise: **************** CAUTION ****************")
+                            self.print_msg("\tRise: Not monotonically increasing: index={}\n"
+                                           .format(offset + 1 + minus_slope_index))
+                else:
+                    # vpt より大きいデータがない => 最大値が vpt と等しければ問題なし
+                    index_list2 = np.where(np_data[:, 2] == vpt)[0].tolist()
+                    if index_list2:
+                        # 問題なし
+                        pass
+                    else:
+                        # すべてのデータが vpt より小さい -> エラー
+                        self.print_msg("\tFall: **************** CAUTION ****************")
+                        self.print_msg(f"\tFall: all data is less than vpt:{vpt}")
 
                 # ②1回目の定常値以降、発振していないこと
                 # (1)データ列の最後の100点の出力電圧の平均値を算出 = Vave
@@ -863,36 +913,52 @@ class Extractor:
                 # (2)データ列の最後の100点の出力電圧のabs(各点のデータ - Vave)/Vave が全て 0.01 以内にあるかチェック
                 tmp_data = np.abs(last_100_data - v_ave)
                 if np.where(tmp_data > abs(v_ave) * 0.01)[0].size != 0:
-                    self.print_msg("\tRise: **************** CAUTION ****************")
-                    self.print_msg("\tRise: Oscillations: There is a point that does not fall within 1% error\n")
+                    if self.SR_msg_flag:
+                        self.print_msg("\tRise: **************** CAUTION ****************")
+                        self.print_msg("\tRise: Oscillations: There is a point that does not fall within 1% error\n")
 
                 # ③定常値Vave が「abs(2*vp) の 1% 以内」にない場合はメッセージ出力
                 if abs(abs(2 * vp) - abs(v_ave)) > (abs(v_ave) * 0.01):
-                    self.print_msg("\tRise: **************** CAUTION ****************")
-                    self.print_msg("\tRise: V_ave are not within 1% of abs(2*vp).\n")
+                    if self.SR_msg_flag:
+                        self.print_msg("\tRise: **************** CAUTION ****************")
+                        self.print_msg("\tRise: V_ave are not within 1% of abs(2*vp).\n")
 
                 ########## 立ち下がりチェック ###########
                 # 立ち下がりチェック事項
-                # ①100ns 後から1回目の定常値vpnに到達するまでに、立ち上がりと立ち下がりを繰り返しているかどうか
+                # ①100ns 後から1回目の定常値vntに到達するまでに、立ち上がりと立ち下がりを繰り返しているかどうか
                 # ②1回目の定常値以降、発振していないこと
                 #   発振の定義：
                 #   (1)データ列の最後の100点の出力電圧の平均値を算出 = Vave
                 #   (2)データ列の最後の100点の出力電圧のabs(各点のデータ - Vave)/Vave が全て 0.01 以内にある
                 # ③「Vave が Vp の 1% 以内」にない場合、メッセージを出力
 
+                # ①1回目の定常値vntに到達するまでに、立ち上がりと立ち下がりを繰り返しているかどうか
                 # vnt を最初に超えた時点のインデックスを取得
+                if self.SR_msg_flag:
+                    self.print_msg("SR: Checking for fall....")
                 index_list = np.where(np_data[:, 3] < vnt)[0].tolist()
-                over_vnt_index = int(index_list[0])
-                self.print_msg("SR: Checking for fall....")
-
-                # ①1回目の定常値vpnに到達するまでに、立ち上がりと立ち下がりを繰り返しているかどうか
-                # 　立ち上がり時のチェックなので、傾きがマイナスになったらメッセージ出力
-                diff = np.diff(np_data[0:over_vnt_index, 3], axis=0)
-                if np.count_nonzero(diff > 0.0) > 0:
-                    plus_slope_index = (np.where(diff > 0.0)[0]).tolist()[0]
-                    self.print_msg("\tFall: **************** CAUTION ****************")
-                    self.print_msg("\tFall: Not monotonically increasing: index={}\n"
-                                        .format(offset + 1 + plus_slope_index))
+                if index_list:
+                    # vnt 未満のデータあり
+                    # 立下り時のチェックなので、傾きがプラスになったらメッセージ出力
+                    over_vnt_index = int(index_list[0])
+                    diff = np.diff(np_data[0:over_vnt_index, 3], axis=0)
+                    if np.count_nonzero(diff > 0.0) > 0:
+                        plus_slope_index = (np.where(diff > 0.0)[0]).tolist()[0]
+                        if self.SR_msg_flag:
+                            self.print_msg("\tFall: **************** CAUTION ****************")
+                            self.print_msg("\tFall: Not monotonically decreasing: index={}\n"
+                                           .format(offset + 1 + plus_slope_index))
+                else:
+                    # vnt 未満のデータがない => 最小値が vnt と等しければ問題なし
+                    index_list2 = np.where(np_data[:, 3] == vnt)[0].tolist()
+                    if index_list2:
+                        # 問題なし
+                        pass
+                    else:
+                        # すべてのデータが vnt より大きい -> エラー
+                        if self.SR_msg_flag:
+                            self.print_msg("\tFall: **************** CAUTION ****************")
+                            self.print_msg(f"\tFall: all data is more than vnt:{vnt}")
 
                 # ②1回目の定常値以降、発振していないこと
                 # (1)データ列の最後の100点の出力電圧の平均値を算出 = Vave
@@ -904,20 +970,24 @@ class Extractor:
                 # (2)データ列の最後の100点の出力電圧のabs(各点のデータ - Vave)/Vave が全て 0.01 以内にあるかチェック
                 tmp_data = np.abs(last_100_data - v_ave)
                 if np.where(tmp_data > abs(v_ave) * 0.01)[0].size != 0:
-                    self.print_msg("\tFall: **************** CAUTION ****************")
-                    self.print_msg("\tFall: Oscillations: There is a point that does not fall within 1% error\n")
+                    if self.SR_msg_flag:
+                        self.print_msg("\tFall: **************** CAUTION ****************")
+                        self.print_msg("\tFall: Oscillations: There is a point that does not fall within 1% error\n")
 
                 # ③定常値Vave が「abs(2*vp) の 1% 以内」にない場合はメッセージ出力
                 if abs(abs(2 * vp) - abs(v_ave)) > (abs(v_ave) * 0.01):
-                    self.print_msg("\tFall: **************** CAUTION ****************")
-                    self.print_msg("\tFall: V_ave are not within 1% of abs(2*vp).\n")
+                    if self.SR_msg_flag:
+                        self.print_msg("\tFall: **************** CAUTION ****************")
+                        self.print_msg("\tFall: V_ave are not within 1% of abs(2*vp).\n")
 
-                self.print_msg("....done\n\n")
+                if self.SR_msg_flag:
+                    self.print_msg("....done\n\n")
 
                 # シミュレーション結果を１回目のものに戻す
                 # print("SR={}".format(self.extract(self.spice.SR_PATTERN)))
                 ret_str = self.extract(self.spice.SR_PATTERN)
                 self.sim_result_str = Extractor.SIM_RESULT_STR_1ST
+                Extractor.ACQ_SR_FLAG = False
                 return ret_str
 
     def get_ca(self):
@@ -945,11 +1015,17 @@ class Extractor:
         s_area = 0
 
         for tmp_str in result:
-            result2 = re.search("l=\d+.* +", tmp_str)[0]
-            result2 = result2.strip()
+            result2 = re.search("l=\d+.*$", tmp_str).group()
+            index = result2.find(' ')
+            if index != -1:
+                result2 = result2[:index]
             l_val = Extractor.unit_conv(result2.split("=")[1])
-            result2 = re.search("w=\d+.* *", tmp_str)[0]
+            result2 = re.search("w=\d+.*$", tmp_str).group()
+            index = result2.find(' ')
+            if index != -1:
+                result2 = result2[:index]
             w_val = Extractor.unit_conv(result2.split("=")[1])
+
             g_area += l_val * w_val
             d_area += w_val * 0.6e-6
             s_area += w_val * 0.6e-6

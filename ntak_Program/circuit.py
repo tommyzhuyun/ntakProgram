@@ -6,6 +6,7 @@ from extractor import *
 
 class Element:
 
+    PREFIX = ''
     OUT_FILE = None  # 出力用ファイルパス(default=None, 標準出力)
 
     def __init__(self, num='1', node=None, param=None):
@@ -40,6 +41,12 @@ class Element:
 
         # param は任意
         self.param = param
+
+        # comment 部が特定の形式が記述してあったら保存(機械学習用)
+        self.comment_dict = dict()
+
+    def get_elem_name(self):
+        return self.PREFIX + str(self.num)
 
     def check_param(self):
         # Checking num
@@ -1635,6 +1642,7 @@ class Circuit:
     power_supply: Hash、回路の電源を格納、power_supply[:TOP]、power_supply[:BOTTOM]、power_supply[:GND]で構成される
     _elements: Array　回路を構成する素子クラスを格納
     count: Hash、各素子の数を格納、例：count[:MOSFET] は mosfet の数を格納
+    _ml_comment: Array 各素子の機械学習用のコメントを保持。各要素の順番は self._elements[] と対応。各要素は dict
     """
 
     OUT_FILE = None  # 出力用ファイルパス(default=None, 標準出力)
@@ -1666,6 +1674,14 @@ class Circuit:
         # Hash、各素子の数を格納、例：count[:MOSFET] は mosfet の数を格納
         self.count = dict()
 
+        # 各素子の機械学習用のコメントを保持。各要素の順番は self._elements[] と対応。各要素は dict
+        self._ml_comment = []
+        self._ml_var_name = []
+
+        self._header = ""
+        self._footer = ""
+        self._footer_flag = False
+
     def size(self):
         """
         circuit class を構成する素子の数を返す
@@ -1676,13 +1692,13 @@ class Circuit:
         """
         return len(self._elements)
 
-    def print_elements(self):
+    def print_elements(self, h_f_flag=False):
         """
         circuit class を構成する全ての素子を spice netlist 形式で出力
         """
-        self.print_element_list(self._elements)
+        self.print_element_list(self._elements, h_f_flag)
 
-    def print_element_list(self, element_list):
+    def print_element_list(self, element_list, h_f_flag=False):
         """
         引数 element のみの spice netlist 形式で出力
 
@@ -1690,6 +1706,8 @@ class Circuit:
         ----------
         element_list: list
             素子のリスト 各要素は Element のインスタンス
+        h_f_flag: Boolean
+            ヘッダとフッターを出力する場合、Trueを指定
 
         [Usage]
           res = []
@@ -1706,6 +1724,8 @@ class Circuit:
 
           printElement(res) => res[0].printElement, res[1].printElement を実行
         """
+        if h_f_flag:
+            self.print_msg(self._header)
         if isinstance(element_list, list):
             for elem in element_list:
                 if isinstance(elem, Element):
@@ -1714,6 +1734,8 @@ class Circuit:
                     raise IllegalArgumentException("Circuit: print_element: element_list must be list of Element")
         else:
             raise IllegalArgumentException("Circuit: print_element: element_list must be list of Element")
+        if h_f_flag:
+            self.print_msg(self._footer)
 
     def set_cir(self):
         """
@@ -1762,6 +1784,20 @@ class Circuit:
     def get_elements(self):
         return self._elements
 
+    def get_ml_comment(self):
+        return self._ml_comment
+
+    def get_ml_var_name(self):
+        return self._ml_var_name
+
+    def get_header_footer(self):
+        """
+        Returns:
+            netlist ファイル中のヘッダとフッター部分の文字列を返す
+            netlist は、ヘッダ＋各Element 記述部分＋フッター の順で並んでいると仮定する
+        """
+        return self._header, self._footer
+
     def make_circuit(self, elem_list):
         """
         array は各素子のクラスのインスタンスで構成
@@ -1791,32 +1827,115 @@ class Circuit:
         Parameters:
             filename: 入力ファイル名
         """
+
+        # 機械学習用のコメント保持
+        comment_dict = dict()
+
         with open(filename, "r", encoding="utf-8") as f:
             contents = f.read()
 
+        ml_comment_dict = None
+
         lines = contents.splitlines()
         for tmp_str in lines:
-            # '*', '.' から始まる行はコメント
-            if (re.match('^\\*.*$', tmp_str) is not None) or (re.match('^\\..*$', tmp_str) is not None) \
-                    or (tmp_str.strip() == ""):
+            # 空白行
+            if tmp_str.strip() == "":
                 continue
+
+            if (re.match('^\\*.*$', tmp_str) is not None) or (re.match('^\\..*$', tmp_str) is not None):
+                # '*' から始まる行はコメント
+
+                # '.' から始まる行は保存
+                if re.match('^\\..*$', tmp_str) is not None:
+                    if self._footer_flag:
+                        self._footer += ('\n' + tmp_str)
+                    else:
+                        self._header += ('\n' + tmp_str)
+
+                # 行頭の文字(*, .)を除去
+                tmp_str = tmp_str[1:]
+                # 文字列中の空白を除去
+                tmp_str = tmp_str.strip().replace(' ', '')
+                # var1={Y:zzzz} の形式だったら保持
+                pattern_str = ".*={.?:.*}$"
+                if re.match(pattern_str, tmp_str):
+                    # 変数名取得
+                    var_name = tmp_str.split('=')[0]
+                    # 文字列中の {} 除去
+                    tmp_str = tmp_str.split('=')[1]
+                    tmp_str = tmp_str.replace('{', '')
+                    tmp_str = tmp_str.replace('}', '')
+                    # パラメータ名とその値のペアを取得、保持
+                    v_name = tmp_str.split(':')[0]
+                    v_val = tmp_str.split(':')[1]
+                    if var_name not in comment_dict:
+                        # 未登録の場合は保存
+                        comment_dict[var_name] = {v_name: v_val}
+                    else:
+                        # 登録済みの場合は pass
+                        pass
             else:
-                self._elements.append(Circuit.get_element_instance(tmp_str))
+                # Element の記述部
+                self._footer_flag = True
+
+                # 行末に機械学習用のコメントがある場合あり
+                index = tmp_str.find('*')
+                if index > 0:
+                    # コメント部を除去した文字列を渡す
+                    self._elements.append(Circuit.get_element_instance(tmp_str[:index]))
+                else:
+                    # コメント部なし->そのまま渡す
+                    self._elements.append(Circuit.get_element_instance(tmp_str))
+
+                # 行末にコメントがあり、機械学習用の記述があったら保持
+                ml_var_name = None
+                if index > 0:
+                    # コメント記述あり
+                    tmp_str = tmp_str[index+1:]
+                    # 空白文字除去
+                    tmp_str = tmp_str.strip().replace(' ', '')
+                    # {Y:zzzz} の形式かチェック
+                    pattern_str = "{.?:.*}$"
+                    if re.match(pattern_str, tmp_str):
+                        # 文字列中の {} 除去
+                        tmp_str = tmp_str.replace('{', '')
+                        tmp_str = tmp_str.replace('}', '')
+                        # パラメータ名とその値のペアを取得、保持
+                        var_name = tmp_str.split(':')[0]
+                        var_val = tmp_str.split(':')[1]
+                        ml_comment_dict = {var_name: var_val}
+                    else:
+                        # xxx={Y:zzzz} の形式ではない → 記載済みの設定かどうかチェック
+                        if tmp_str in comment_dict:
+                            ml_comment_dict = comment_dict[tmp_str]
+                            ml_var_name = tmp_str
+
+                        else:
+                            # コメント記述なし
+                            raise IllegalArgumentException(f"There is no description for ML: {tmp_str}")
+                else:
+                    ml_comment_dict = None
+
+                self._ml_comment.append(ml_comment_dict)
+                self._ml_var_name.append(ml_var_name)
 
         self.set_cir()
         #self.print_elements()
 
-    def write_circuit(self, filename):
+    def write_circuit(self, filename, h_f_flag=False):
         """
         spice netlist 形式で回路を出力
 
         Parameters:
-            filename: 出力ファイル名。既存ファイルの場合は、append モードで書き出しを行う。
+            filename:
+                出力ファイル名。既存ファイルの場合は、append モードで書き出しを行う。
+            h_f_flag:
+                ヘッダとフッターを出力する場合、Trueを指定
         """
 
         pre_out_file = Element.OUT_FILE
         Element.OUT_FILE = filename
-        self.print_elements()
+        self.print_elements(h_f_flag)
         Element.OUT_FILE = pre_out_file
 
     def node_info(self):
