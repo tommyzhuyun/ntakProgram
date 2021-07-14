@@ -468,9 +468,10 @@ class Extractor:
                 # abs() > 0.05 を最初に超えた時点のインデックスを取得
                 vcmirn = vcmirn_list[0][0]
             vcmr = Decimal(vcmirp) + Decimal(vcmirn)
-            cmir = Decimal(str(50*vcmr))/(Decimal(self.psvoltage))
+            cmir = Decimal(str(100*vcmr))/(Decimal(self.psvoltage))
             return cmir
         else:
+            # Hspice, Ngspice 以外
             pass
 
     def get_gain_sim(self):

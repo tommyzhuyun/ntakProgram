@@ -175,7 +175,7 @@
   * echo Vcmirp = $&Vcmirp
   * echo Vcmirn = $&Vcmirn
   let Vcmr = ($&Vcmirp + $&Vcmirn)
-  let CMIR = 50*$&Vcmr/($&psvoltage)
+  let CMIR = 100*$&Vcmr/($&psvoltage)
   echo Vcmr = $&Vcmr
   echo CMIR = $&CMIR
 
