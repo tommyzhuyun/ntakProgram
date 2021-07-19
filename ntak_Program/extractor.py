@@ -1036,9 +1036,9 @@ class Extractor:
                 index = result2.find(' ')
                 if index != -1:
                     result2 = result2[:index]
-                    m_val = Extractor.unit_conv(result2.split("=")[1])
-                else:
-                    m_val = 1
+                m_val = Extractor.unit_conv(result2.split("=")[1])
+            else:
+                m_val = 1
 
             g_area += l_val * w_val * m_val
             d_area += w_val * m_val * 0.6e-6
