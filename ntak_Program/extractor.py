@@ -322,8 +322,12 @@ class Extractor:
         num = 1 + Decimal(str(self.beta)) * Decimal(self.gain_sim)
         tmp = self.valr1 + self.valr2
         tmp2 = self.beta * Decimal(str(self.gain_sim))
-        denom = (Decimal('1.0') / Decimal(self.or_sim)) - (Decimal('1.0') / Decimal(str(tmp))) \
-                - (tmp2 / Decimal(str(self.valrl)))
+        denom = (Decimal('1.0')/Decimal(self.or_sim))-(Decimal('1.0')/Decimal(str(tmp)))-(tmp2/Decimal(str(self.valrl)))
+        # 計算途中詳細確認用
+        #denom1 = Decimal('1.0')/Decimal(self.or_sim)
+        #denom2 = Decimal('1.0')/Decimal(str(tmp))
+        #denom3 = tmp2/Decimal(str(self.valrl))
+        #denom = denom1 - denom2 - denom3
         tmp = Decimal(str(num)) / denom
         self.result_or = str("{:e}".format(tmp))
         

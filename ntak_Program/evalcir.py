@@ -12,6 +12,9 @@ class EvalCir:
     回路の評価を行うクラス
     """
 
+    # 機械学習モードの ON/OFF 切り替えフラグ
+    ml_mode = False
+
     def __init__(self, sp_filename, spice_type='ngspice', port=None,
                  cir_file=None, conf_file='ngspice.conf', out_file=None):
         """
@@ -79,11 +82,25 @@ class EvalCir:
         self.cir_file = cir_file
         self.out_file = out_file
 
+        if self.spice_type == 'ngspice':
+            # 「.csparam psvoltage=psvoltage」の行が入っていなかったら追加
+            with open(cir_file, "r", encoding="utf-8") as f:
+                contents = f.read()
+            lines = contents.splitlines()
+            check_flag = False
+            for tmp_str in lines:
+                if tmp_str.lower() == r".csparam psvoltage=psvoltage":
+                    check_flag = True
+                    break
+
+            if not check_flag:
+                print(f"ERROR: {cir_file}: 「.csparam psvoltage=psvoltage」行を追加してください")
+                exit(1)
+
         # 結果出力用ファイル名
         self.out_file = out_file
         self.extractor = Extractor(None, self.spice, self.cir_file, self.out_file)
         self.spice.set_extractor(self.extractor)
-
 
     @classmethod
     def get_spice_instance(cls, spice_type):
