@@ -1030,10 +1030,20 @@ class Extractor:
             if index != -1:
                 result2 = result2[:index]
             w_val = Extractor.unit_conv(result2.split("=")[1])
+            result2 = re.search("m=\d+.*$", tmp_str)
+            if result2 != None:
+                result2 = result2.group()
+                index = result2.find(' ')
+                if index != -1:
+                    result2 = result2[:index]
+                    m_val = Extractor.unit_conv(result2.split("=")[1])
+                else:
+                    m_val = 1
 
-            g_area += l_val * w_val
-            d_area += w_val * 0.6e-6
-            s_area += w_val * 0.6e-6
+            g_area += l_val * w_val * m_val
+            d_area += w_val * m_val * 0.6e-6
+            s_area += w_val * m_val * 0.6e-6
+
         # print("g_area={}".format(g_area))
         # print("d_area={}".format(d_area))
         # print("s_area={}".format(s_area))
