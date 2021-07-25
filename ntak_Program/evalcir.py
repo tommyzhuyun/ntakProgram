@@ -12,11 +12,8 @@ class EvalCir:
     回路の評価を行うクラス
     """
 
-    # 機械学習モードの ON/OFF 切り替えフラグ
-    ml_mode = False
-
     def __init__(self, sp_filename, spice_type='ngspice', port=None,
-                 cir_file=None, conf_file='ngspice.conf', out_file=None):
+                 cir_file=None, conf_file='ngspice.conf', out_file=None, pid=None):
         """
         回路の評価を行う
 
@@ -44,6 +41,9 @@ class EvalCir:
         out_file : str
             結果出力用ファイル名。None の場合は、標準出力へ結果表示
 
+        pid : str
+            MLモード動作時のプロセスID
+
         Returns
         -------
         EvalCir : EvalCir
@@ -57,6 +57,9 @@ class EvalCir:
 
         # 目標値のリスト
         self.requirements_list = dict()
+
+        # Failed 時の設定値のリスト
+        self.failed_val_list = dict()
 
         # 評価式のリスト
         self.eval_list = dict()
@@ -72,7 +75,15 @@ class EvalCir:
                 # hspice 以外の場合は、port が指定されていても無視
                 pass
 
-        params = self.get_conf(conf_file)
+        #print(f"conf_file: {conf_file}")
+        tmp_conf_file = conf_file
+        #print(f"pid: {pid}")
+        if pid is not None:
+            # ML モードで動いている場合
+            # conf ファイルはコピーしておらす、ディレクトリ移動しているためパスを調整する必要あり
+            tmp_conf_file = "../../../" + conf_file
+        params = self.get_conf(tmp_conf_file)
+        self.spice.set_pid(pid)
         self.spice.set_conf(params)
 
         # Extractor.print_msg('spice_type: {}'.format(spice_type))
@@ -99,8 +110,9 @@ class EvalCir:
 
         # 結果出力用ファイル名
         self.out_file = out_file
-        self.extractor = Extractor(None, self.spice, self.cir_file, self.out_file)
+        self.extractor = Extractor(None, self.spice, self.cir_file, self.out_file, self.failed_val_list)
         self.spice.set_extractor(self.extractor)
+
 
     @classmethod
     def get_spice_instance(cls, spice_type):
@@ -144,6 +156,7 @@ class EvalCir:
 
         # config ファイル中のパラメータを取得
         try:
+            #print(f"EvalCir: get_conf(): conf_file: {conf_file}")
             conf = dict()
             with open(conf_file, "r", encoding="utf-8") as f:
                 tmp_str = f.read()
@@ -194,9 +207,19 @@ class EvalCir:
                         tmp_data = tmp_str2.split("=")
                         self.eval_list[tmp_data[0].strip()] = tmp_data[1].strip()
 
+                    # Failed 時の設定値を取得
+                    if tmp_str.startswith("FailedVal:"):
+                        tmp_data = tmp_str.split(":")
+                        # パラメータ名を取得
+                        par_str = tmp_data[1]
+                        # 数値を取得
+                        num = tmp_data[2]
+                        self.failed_val_list[par_str] = float(num)
+
             # print(conf)
             # print(EvalCir.requirements_list)
             # print(EvalCir.eval_list)
+            # print(self.failed_val_list)
             return conf
         except FileNotFoundException as e:
             raise IllegalArgumentException('No such config file: {}'.format(conf_file))
@@ -276,7 +299,7 @@ class EvalCir:
         for item_name, item_val in result.items():
             # 指定要件あり
             judge = False
-            # print(item_name, item_val)
+            #print(item_name, item_val)
             # 指定されたパラメータに関する結果が無かった場合(空のリスト)
             if isinstance(item_val, list) and len(item_val) == 0:
                 item_val = None
@@ -402,17 +425,24 @@ class EvalCir:
         """
         result = dict()
         for item_name, param_data in self.sim_result.items():
-            # print(item_name)
+            #print(f"item_name: {item_name}, param_data:{param_data}")
             # 各パラメータの名前を持つ変数を宣言する
             # print("exec: {} = {}".format(item_name, float(param_data.val)))
             if param_data.val is None:
                 exec('{} = {}'.format(item_name, None))
+            elif param_data.val == np.inf:
+                exec('{} = {}'.format(item_name, "float('inf')"))
+            elif param_data.val == -np.inf:
+                exec('{} = {}'.format(item_name, "float('-inf')"))
             else:
                 exec('{} = {}'.format(item_name, float(param_data.val)))
 
         for eval_name, formula in self.eval_list.items():
             # print(formula)
-            self.eval_result[eval_name] = "{:.6E}".format(eval(formula))
+            try:
+                self.eval_result[eval_name] = "{:.6E}".format(eval(str(formula)))
+            except ZeroDivisionError as e:
+                print(f"ERROR::: {eval_name}: ZeroDivisionError")
         # print(result)
 
     def get_eval_list(self):

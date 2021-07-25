@@ -48,7 +48,7 @@ class Extractor:
     # SRの値が条件を満たすかどうかのチェックに使用する
     SR_VP = ""
 
-    def __init__(self, sim_result_str, spice, cir_file, out_file):
+    def __init__(self, sim_result_str, spice, cir_file, out_file, failed_val_list):
         """
         spiceによるシミュレーション結果をセットし、そこから各項目の値の
         抽出を行う
@@ -63,6 +63,8 @@ class Extractor:
             回路ファイルパス
         out_file: str
             出力用ファイルパス
+        failed_val_list: dict
+            シミュレーション結果が Failed 時の設定値のリスト
         """
         self.sim_result_str = sim_result_str
         self.spice = spice
@@ -93,6 +95,9 @@ class Extractor:
 
         # SR のチェックメッセージを表示
         self.SR_msg_flag = False
+
+        # シミュレーション結果が Failed 時の設定値のリスト
+        self.failed_val_list = failed_val_list
 
     def set_sim_result_str(self, sim_result_str):
         """
@@ -158,6 +163,7 @@ class Extractor:
         Parameters
         ----------
         pattern_str: str
+
             抽出パターン文字列
         digit_flag: bool (Default: False)
             抽出した値を数値へ変換する場合は True、
@@ -274,7 +280,7 @@ class Extractor:
             出力抵抗(シミュレーション値)。単位: [Ω]
         """
 
-        # 出力抵抗(シミュレーション結果) を取得
+        # 出力抵抗(シミュレーション結果) を取得。マイナスでもそのまま取得: 20210720
         return self.extract(self.spice.OR_SIM_PATTERN)
 
     def get_or(self):
@@ -284,10 +290,12 @@ class Extractor:
         Returns
         -------
             出力抵抗。単位: [Ω]
+            self.get_or_sim() がマイナスの値の場合は inf を返す。
         """
 
         # 出力抵抗(シミュレーション結果) を取得
         self.or_sim = self.get_or_sim()
+        #print(f"self.or_sim: {self.or_sim}")
 
         # 直流利得のシミュレーション結果
         self.gain_sim = self.get_gain_sim()
@@ -329,8 +337,13 @@ class Extractor:
         #denom3 = tmp2/Decimal(str(self.valrl))
         #denom = denom1 - denom2 - denom3
         tmp = Decimal(str(num)) / denom
+        # 出力抵抗 self.result_or の計算結果がマイナスになった場合、conf ファイル内の設定値とする: 20210720
+        if tmp < 0:
+            failed_val = self.failed_val_list.get('OR', None)
+            if failed_val is not None:
+                tmp = failed_val
         self.result_or = str("{:e}".format(tmp))
-        
+
         return str(tmp)
 
     def get_thd(self):
@@ -389,6 +402,7 @@ class Extractor:
         -------
             同相除去比。単位: [dB]
         """
+        # シミュレーション結果がマイナスでもそのまま 20210720
         return self.extract(self.spice.CMRR_PATTERN, True, "=", "at")
 
     def get_cmrr(self):
@@ -399,7 +413,9 @@ class Extractor:
         -------
             同相除去比。単位: [倍]
         """
+        # シミュレーション結果がマイナスでもそのまま 20210720
         cmrr_db = float(self.get_cmrr_db())
+        #print(f"cmrr_db: {cmrr_db}")
         return pow(10.0, cmrr_db/20)
 
     def get_psrr_db(self):
@@ -410,6 +426,7 @@ class Extractor:
         -------
             電源電圧変動除去比。単位: [dB]
         """
+        # シミュレーション結果がマイナスでもそのまま 20210720
         return self.extract(self.spice.PSRR_PATTERN)
 
     def get_psrr(self):
@@ -420,7 +437,9 @@ class Extractor:
         -------
             電源電圧変動除去比。単位: [倍]
         """
+        # シミュレーション結果がマイナスでもそのまま 20210720
         psrr_db = float(self.get_psrr_db())
+        #print(f"psrr_db: {psrr_db}")
         return pow(10.0, psrr_db/20)
 
     def get_cmir(self):
@@ -486,6 +505,7 @@ class Extractor:
         -------
             直流利得 DC Gain(シミュレーション値)
         """
+        # 直流利得(シミュレーション結果) を取得。マイナスでもそのまま取得: 20210720
         return self.extract(self.spice.GAIN_SIM_PATTERN)
 
     def get_gain(self):
@@ -499,10 +519,17 @@ class Extractor:
 
         # 既に出力抵抗を計算済み
         #   → 出力抵抗および直流利得のシミュレーション値を計算済み
-
         # だったらその値を使用する
         if self.result_or is None:
             self.get_or()
+
+        # 出力抵抗 self.result_or の計算結果がマイナスになった場合、conf ファイル内の設定値とする: 20210720
+        or_failed_val = self.failed_val_list.get('OR', None)
+        if or_failed_val is not None and float(self.result_or) == float(or_failed_val):
+            failed_val = self.failed_val_list.get('GAIN', None)
+            if failed_val is not None:
+                self.result_gain = failed_val
+                return self.result_gain
 
         num = Decimal(self.valrl) + Decimal(self.result_or)
         denom = Decimal(self.valrl)
@@ -519,6 +546,7 @@ class Extractor:
         -------
             直流利得。単位: [dB]
         """
+        # 直流利得(シミュレーション結果) を取得。マイナスでもそのまま取得: 20210720
         return self.extract(self.spice.GAIN_DB_PATTERN)
 
     def get_gain_db(self):
@@ -531,6 +559,14 @@ class Extractor:
         """
         if self.result_gain is None:
             self.get_gain()
+
+        # 出力抵抗 self.result_or の計算結果がマイナスになった場合、conf ファイルの設定値とする: 20210720
+        gain_failed_val = self.failed_val_list.get('GAIN', None)
+        if gain_failed_val is not None and float(self.result_gain) == float(gain_failed_val):
+            failed_val = self.failed_val_list.get('GAIN_DB', None)
+            if failed_val is not None:
+                return failed_val
+
         return str(20 * math.log10(Decimal(self.result_gain)))
 
     def get_gbw(self):
@@ -556,6 +592,16 @@ class Extractor:
             halfdc = self.extract(pattern_halfdc)
             halfdc_f = self.extract(pattern_halfdcf)
 
+            # unitygain, halfdc_f が failed になった場合、conf ファイル内の数値をセットする: 20210720
+            if unitygain == 'failed':
+                failed_val = self.failed_val_list.get('UNITYGAIN', None)
+                if failed_val is not None:
+                    unitygain = failed_val
+            if halfdc_f == 'failed':
+                failed_val = self.failed_val_list.get('HALFDC_F', None)
+                if failed_val is not None:
+                    halfdc_f = failed_val
+
             gbw = 0.0
             if (float(halfdc) > 0) and (float(halfdc_f) > 0):
                 gbw = float(halfdc) * float(halfdc_f)
@@ -573,7 +619,14 @@ class Extractor:
         -------
             位相余裕。単位: [degree]
         """
-        return self.extract(self.spice.PM_PATTERN)
+        pm = self.extract(self.spice.PM_PATTERN)
+        if pm == 'failed':
+            # PM が failed になった場合、conf ファイル内の数値をセットする: 20210720
+            failed_val = self.failed_val_list.get('PM', None)
+            if failed_val is not None:
+                pm = failed_val
+
+        return pm
 
     def get_sr(self):
         """
@@ -809,7 +862,7 @@ class Extractor:
                 spfile_index = int(self.spice.sp_filename[-4])
                 spfile_index += 1
                 new_spfilename = self.spice.sp_filename[:-4] + str(spfile_index) + ".sp"  # hspice2.sp
-                print(new_spfilename)
+                #print(new_spfilename)
                 if not Extractor.ACQ_SR_FLAG:
                     Extractor.ACQ_SR_FLAG = True
                 # １回目のシミュレーション結果文字列を退避する
@@ -1031,7 +1084,7 @@ class Extractor:
                 result2 = result2[:index]
             w_val = Extractor.unit_conv(result2.split("=")[1])
             result2 = re.search("m=\d+.*$", tmp_str)
-            if result2 != None:
+            if result2 is not None:
                 result2 = result2.group()
                 index = result2.find(' ')
                 if index != -1:
@@ -1043,7 +1096,6 @@ class Extractor:
             g_area += l_val * w_val * m_val
             d_area += w_val * m_val * 0.6e-6
             s_area += w_val * m_val * 0.6e-6
-
         # print("g_area={}".format(g_area))
         # print("d_area={}".format(d_area))
         # print("s_area={}".format(s_area))
@@ -1177,6 +1229,7 @@ class Extractor:
         else:
             with open(self.out_file, 'a') as f:
                 print(msg, file=f)
+
 
 class IllegalArgumentException(Exception):
     """ 引数が不正時のエラー """
