@@ -874,6 +874,19 @@ class Extractor:
                 # ２回目の実行時
 
                 # vnt, vpt, vp 取得
+                vnt_list = self.extract("^ vnt=.*$")
+                vpt_list = self.extract("^ vpt=.*$")
+                if vnt_list == [] or vpt_list == []:
+                    print("get_sr(): Failed...")
+                    # シミュレーション結果を１回目のものに戻す
+                    # print("SR={}".format(self.extract(self.spice.SR_PATTERN)))
+                    ret_str = self.extract(self.spice.SR_PATTERN)
+                    self.sim_result_str = Extractor.SIM_RESULT_STR_1ST
+                    Extractor.ACQ_SR_FLAG = False
+                    failed_val = self.failed_val_list.get('SR', None)
+                    if failed_val is not None:
+                        return failed_val
+
                 vnt = float(self.extract("^ vnt=.*$"))
                 vpt = float(self.extract("^ vpt=.*$"))
                 vp = Extractor.SR_VP
