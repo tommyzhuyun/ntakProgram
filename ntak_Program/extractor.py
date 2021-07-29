@@ -452,8 +452,10 @@ class Extractor:
         """
 
         if isinstance(self.spice, Ngspice):
+            # Ngspice の場合
             return self.extract(self.spice.CMIR_PATTERN)
         elif isinstance(self.spice, Hspice):
+            # Hspice の場合
             lines = self.sim_result_str.splitlines()
             index = 0
             for index, line in enumerate(lines):
@@ -480,7 +482,7 @@ class Extractor:
             vcmirp = float(self.psvoltage)/2
             if vcmirp_list.size != 0:
                 # abs() > 0.05 を最初に超えた時点のインデックスを取得
-                vcmirp = vcmirp_list[0][0]
+                vcmirp = vcmirp_list[0][0]/2
 
             # abs() > 0.05 を最初に超えた時点のインデックスを取得
             # 1-abs(v(out2,os))/((0.5)*v(in1))
@@ -489,8 +491,9 @@ class Extractor:
             vcmirn = float(self.psvoltage)/2
             if vcmirn_list.size != 0:
                 # abs() > 0.05 を最初に超えた時点のインデックスを取得
-                vcmirn = vcmirn_list[0][0]
+                vcmirn = vcmirn_list[0][0]/2
             vcmr = Decimal(vcmirp) + Decimal(vcmirn)
+
             cmir = Decimal(str(100*vcmr))/(Decimal(self.psvoltage))
             return cmir
         else:
