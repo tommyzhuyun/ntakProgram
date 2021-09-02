@@ -137,7 +137,19 @@ class Spice:
             elif spice_type == 'hspice':
                 with open(self.hspice_outfile, 'w') as fp:
                     # Hspice 実行結果をファイルに保存
-                    cp = subprocess.run(cmd, stdout=fp)
+                    #print(f"spice: call subprocess.run: cmd:{cmd}")
+
+                    try:
+                        cp = subprocess.run(cmd, shell=True, stdout=fp, timeout=30)
+                        #cp = subprocess.run(cmd, stdout=fp)
+                        #cp = subprocess.run(cmd, shell=False, check=False, stdout=fp, stderr=subprocess.DEVNULL)  #上行と同じ動きになる
+                        #print(f"cmd:{cmd} done.-----------------------------")
+                        #cp = subprocess.run(cmd, shell=False, stdout=fp)
+
+                    except subprocess.TimeoutExpired as e:
+                        print(f"Spice.simulate(): Timeout: Spice: cmd = {str(cmd)}")
+                        return ""
+
                 with open(self.hspice_outfile, "r", encoding="utf-8") as f:
                     # ファイルに保存された Hspice 実行結果を読み込み
                     result = f.read()
@@ -260,6 +272,7 @@ class Hspice(Spice):
     #PD_PATTERN = "^ pdis= .*$"  # 2021-07-16
     PD_PATTERN = "^ *pdis=.*$"
     # IRN: Hspice は結果中の最後の要素。
+    # IRN_PATTERN = "total equivalent input noise += +.* +V +$"  # 新Hspice
     IRN_PATTERN = "total equivalent input noise += +.*$"
     OR_SIM_PATTERN = "output resistance at v\\(out\\) += +.*$"
     OR_PATTERN = ""
@@ -307,8 +320,10 @@ class Hspice(Spice):
     def simulate(self, sp_filename, item, cir_file=None, spice_type=None):
 
         cmd = ['hspice64']
+        cmd2 = "exec hspice64"
         if self.port is not None:
             cmd.extend(['-CC'])
+            cmd2 += " -CC"
 
         basename_without_ext = os.path.splitext(os.path.basename(sp_filename))[0]  # hspice
         #
@@ -337,11 +352,17 @@ class Hspice(Spice):
 
         #print(self.hspice_outfile)
         cmd.extend(['-i', sp_filename])
+        cmd2 += " -i "
+        cmd2 += sp_filename
         if self.port is not None:
             cmd.extend(['-port', self.port])
+            cmd2 += " -port "
+            cmd2 += self.port
         cmd.extend(['-o', self.hspice_outfile])
+        cmd2 += " -o "
+        cmd2 += self.hspice_outfile
         #print(cmd)
-        return super().simulate(cmd, sp_filename, item, cir_file, spice_type)
+        return super().simulate(cmd2, sp_filename, item, cir_file, spice_type)
 
 
 class Ngspice(Spice):

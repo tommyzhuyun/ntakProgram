@@ -6,6 +6,7 @@
 .param valrl=20k
 .param valrf=1T
 .param valcf=10m
+.op
 
 *****< Power_Supply >*****
 VDD	vdd gnd	half

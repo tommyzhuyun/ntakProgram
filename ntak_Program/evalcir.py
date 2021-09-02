@@ -75,6 +75,10 @@ class EvalCir:
                 # hspice 以外の場合は、port が指定されていても無視
                 pass
 
+        # 機械学習の gym.reset() で、前 episode の最適解(評価式1が最大となるパラメータ)を
+        # 初期値として使用する場合 True、そうでない場合は random
+        self.ml_use_pre_opt = False
+
         #print(f"conf_file: {conf_file}")
         tmp_conf_file = conf_file
         #print(f"pid: {pid}")
@@ -142,7 +146,7 @@ class EvalCir:
 
     def get_conf(self, conf_file):
         """
-        実行時のコマンドから判別して、対応する spice のインスタンスを返す
+        config ファイルでの各設定値を取得する
 
         Parameters
         ----------
@@ -215,6 +219,18 @@ class EvalCir:
                         # 数値を取得
                         num = tmp_data[2]
                         self.failed_val_list[par_str] = float(num)
+
+                    # Failed 時の設定値を取得
+                    if tmp_str.startswith("ML_UsePreOptimal:"):
+                        tmp_data = tmp_str.split(":")
+                        # True/Falseを取得
+                        bool_param = str(tmp_data[1]).upper()
+                        if bool_param == 'TRUE':
+                            # True の場合、前回 episode の評価式1が最大時の state を使用
+                            self.ml_use_pre_opt = True
+                        else:
+                            # False またはそれ以外の文字列の場合、ランダム値を使用
+                            self.ml_use_pre_opt = False
 
             # print(conf)
             # print(EvalCir.requirements_list)

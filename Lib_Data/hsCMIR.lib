@@ -6,6 +6,7 @@
 .param rload=20k
 .param bgain=10
 * .param gain=0.5
+.op
 
 *****< Power_Supply >*****
 VDD vdd gnd 'half'

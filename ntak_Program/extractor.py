@@ -265,6 +265,7 @@ class Extractor:
             # Hspice の場合、複数行がマッチ。最後の要素のみ返す
             result = self.extract(self.spice.IRN_PATTERN)
             if len(result) > 0:
+                result = self.extract(self.spice.IRN_PATTERN, True, "=", "V")
                 return result[len(result) - 1]
             else:
                 return None
@@ -855,7 +856,7 @@ class Extractor:
                 # vin1 のうち、小さい値を vp とする
                 vp = vin_out1 if vin_out1 < vin_out2 else vin_out2
                 Extractor.SR_VP = vp
-                # print("(1)vp= {}".format(vp))
+                #print("(1)vp= {}".format(vp))
 
                 # hsSR2.lib 中の vp の値を書き換え
                 replace_str = ".param vp=" + str(vp)

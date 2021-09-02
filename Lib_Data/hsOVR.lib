@@ -4,6 +4,7 @@
 *****< Parameters >*****
 .param half='psvoltage/2'
 .param rload=20k
+.op
 
 *****< Power_Supply >*****
 VDD vdd gnd 'half'

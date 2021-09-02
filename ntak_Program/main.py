@@ -82,7 +82,8 @@ def main():
     path_args_cirfile = os.path.abspath(args.cir)
     path_base_cirfile = os.path.abspath('../Sp_Data/OPamp.sp')
     if path_args_cirfile != path_base_cirfile:
-        os.unlink(path_base_cirfile)
+        if os.path.exists(path_base_cirfile):
+            os.unlink(path_base_cirfile)
         os.symlink(path_args_cirfile, path_base_cirfile)
 
     # cir ファイルには ../Sp_Data/OPamp.sp を指定

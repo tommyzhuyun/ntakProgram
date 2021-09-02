@@ -2,7 +2,7 @@
 .lib SR2
 
 *****< Parameters >*****
-.param vp=0.1
+.param vp=0.01
 .param half='psvoltage/2'
 .param valr1=10k
 .param valr2=10k
@@ -12,7 +12,7 @@
 .param tf='vp/grad'
 .param pw1=300u        $ pulse width
 .param pp1=400u        $ pulse period
-
+.op
 
 *****< Power_Supply >*****
 VDD	vdd gnd	'half'
