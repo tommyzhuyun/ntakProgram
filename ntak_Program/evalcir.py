@@ -3,8 +3,8 @@
 import re
 import numpy as np
 import texttable as ttb
-from spice import *
-from extractor import Extractor, IllegalArgumentException
+from .spice import *
+from .extractor import Extractor, IllegalArgumentException
 
 
 class EvalCir:
@@ -242,7 +242,7 @@ class EvalCir:
         finally:
             pass
 
-    def calc(self, sp_filename, item=None):
+    def calc(self, sp_filename, item=None,CheckRequrements=False):
         """
         spiceによるシミュレーション結果を返す
 
@@ -299,8 +299,11 @@ class EvalCir:
         # シミュレーション結果が条件を満たすか否かチェック
         self.check_requirements(tmp_result)
 
-        self.calc_eval_form()
-        return self.sim_result
+        #self.calc_eval_form()
+        if CheckRequrements:
+            return self.DelUnReq(self.sim_result)
+        else:
+            return self.sim_result
 
     def check_requirements(self, result):
         """
@@ -341,7 +344,7 @@ class EvalCir:
                 # 指定要件があるか？
                 req = self.requirements_list.get(item_name, None)
 
-                if (re.search(".+_SIM$", item_name) is not None) or (req is None):
+                if (re.search(".+_SIM$", item_name) is not None) or (req is None) :
                     # XXX_SIM についてはチェックなし
                     # 指定要件なし
                     # print("{}: pass....".format(item_name))
@@ -421,6 +424,7 @@ class EvalCir:
                     # 指定要件なし
                     pass
 
+
             # print("Done:  item_name = {}, judge = {}".format(item_name, judge))
             self.sim_result[item_name] = ParamData(item_val, sim_unit, judge)
 
@@ -461,6 +465,17 @@ class EvalCir:
                 print(f"ERROR::: {eval_name}: ZeroDivisionError")
         # print(result)
 
+    def DelUnReq(self,result):
+        for item_name in list(result):
+            if item_name == 'CC':
+                pass
+            else:
+                req = self.requirements_list.get(item_name, None)
+                if req is None:
+                    del result[item_name]
+        return result
+
+
     def get_eval_list(self):
         return self.eval_result
 
@@ -475,7 +490,7 @@ class EvalCir:
         出場部門と目標値の表示
         """
         self.print_msg("*==========================================================================*")
-        self.print_msg("                              PROGRAM START                                 ")
+        self.print_msg("                              Hspice Calling                                ")
         self.print_msg("*==========================================================================*")
 
     def print_check_msg(self, prefix, req_cond, item_val, sim_unit, req_num, req_unit):
@@ -491,6 +506,30 @@ class EvalCir:
                                                                                        float(req_num), req_unit))
         else:
             pass
+
+    def array_opamp_performance(self):
+        table = []
+        for item_name, param_data in self.sim_result.items():
+            if item_name == 'CC':
+                table += [["消費電流変動率", "50", "%", "pass" if param_data.judge else "fail"]]
+            else:
+                param_str = Spice.PARAM_UNIT[item_name][1]
+                param_data = self.sim_result[item_name]
+
+                if param_data.val is None:
+                    val_str = "No Data..."
+                else:
+                    val_str = "{:.6E}".format(float(param_data.val))
+
+                req = self.requirements_list.get(item_name, None)
+                if req is None:
+                    judge_str = "not required"
+                else:
+                    judge_str = "pass" if param_data.judge else "fail"
+                table += [[param_str, val_str, param_data.unit, judge_str]]
+        return table
+
+
 
     def print_opamp_performance(self):
         """

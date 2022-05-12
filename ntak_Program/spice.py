@@ -135,10 +135,11 @@ class Spice:
                 result = o.stdout.decode('utf_8')
 
             elif spice_type == 'hspice':
+                """-----------------------------------------------------------------------------------------------------------------------------------------------
                 with open(self.hspice_outfile, 'w') as fp:
                     # Hspice 実行結果をファイルに保存
                     #print(f"spice: call subprocess.run: cmd:{cmd}")
-
+                
                     try:
                         cp = subprocess.run(cmd, shell=True, stdout=fp, timeout=30)
                         #cp = subprocess.run(cmd, stdout=fp)
@@ -149,7 +150,8 @@ class Spice:
                     except subprocess.TimeoutExpired as e:
                         print(f"Spice.simulate(): Timeout: Spice: cmd = {str(cmd)}")
                         return ""
-
+                        -----------------------------------------------------------------------------------------------------------------------------------------------
+                """
                 with open(self.hspice_outfile, "r", encoding="utf-8") as f:
                     # ファイルに保存された Hspice 実行結果を読み込み
                     result = f.read()
@@ -190,15 +192,15 @@ class Spice:
             tmp_result = self.execSpice(cmd, sp_filename, spice_type)
         except ExecSpiceException as e:
             print(e)
-
         self.extractor.set_sim_result_str(tmp_result)
         #print(tmp_result)
         result = dict()  # dict 型で返す
         if item:
             if isinstance(item, list):
                 # 配列
-                for tmp in item:
-                    result[tmp] = self.extractor.get_each_elem(tmp)
+                for tmp in list(item):
+                    catch = self.extractor.get_each_elem(tmp)
+                    result[tmp] = catch
             elif isinstance(item, str):
                 # 文字列
                 result[item] = self.extractor.get_each_elem(item)

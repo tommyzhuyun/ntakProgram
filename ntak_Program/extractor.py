@@ -4,7 +4,7 @@ import re
 import fileinput
 import numpy as np
 
-from spice import *
+from .spice import *
 from decimal import *
 
 
